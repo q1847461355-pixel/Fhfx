@@ -3439,7 +3439,7 @@
                 const stickyRowClass = isSummary ? 'sticky bottom-0' : '';
                 
                 // 调整偏移量，确保两行汇总行能够堆叠
-                const stickyRowOffset = isAverage ? 'bottom-0' : (isCumulative ? 'bottom-[53px]' : '');
+                const stickyRowOffset = isAverage ? 'bottom-0' : (isCumulative ? 'bottom-[48px]' : '');
                 const zIndexRow = isSummary ? Z_INDEX.SUMMARY_ROW : Z_INDEX.BODY;
                 const zIndexLeft = isSummary ? Z_INDEX.SUMMARY_CORNER : Z_INDEX.LEFT_COL;
 
