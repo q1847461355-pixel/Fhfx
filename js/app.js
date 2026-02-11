@@ -241,8 +241,7 @@
             importSection: document.getElementById('importSection'),
             configSection: document.getElementById('configSection'),
             visualizationSection: document.getElementById('visualizationSection'),
-            exportSection: document.getElementById('exportSection'),
-            loadExampleDataBtn: document.getElementById('loadExampleData')
+            exportSection: document.getElementById('exportSection')
         };
 
         // 初始化事件监听
@@ -260,8 +259,39 @@
                 removeAllFiles();
             });
 
-            if (elements.loadExampleDataBtn) {
-                elements.loadExampleDataBtn.addEventListener('click', loadExampleData);
+            // Tab 切换逻辑
+            const tabFileUpload = document.getElementById('tabFileUpload');
+            const tabTemplateSelection = document.getElementById('tabTemplateSelection');
+            const fileUploadView = document.getElementById('fileUploadView');
+            const templateSelectionView = document.getElementById('templateSelectionView');
+
+            if (tabFileUpload && tabTemplateSelection && fileUploadView && templateSelectionView) {
+                tabFileUpload.addEventListener('click', () => {
+                    // 切换按钮样式
+                    tabFileUpload.classList.add('bg-white', 'text-indigo-700', 'shadow-sm', 'border-indigo-100/50');
+                    tabFileUpload.classList.remove('text-slate-500', 'hover:text-slate-700', 'hover:bg-white/60');
+                    tabTemplateSelection.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm', 'border-indigo-100/50');
+                    tabTemplateSelection.classList.add('text-slate-500', 'hover:text-slate-700', 'hover:bg-white/60');
+                    
+                    // 切换内容视图
+                    fileUploadView.classList.remove('hidden');
+                    templateSelectionView.classList.add('hidden');
+                });
+
+                tabTemplateSelection.addEventListener('click', () => {
+                    // 切换按钮样式
+                    tabTemplateSelection.classList.add('bg-white', 'text-indigo-700', 'shadow-sm', 'border-indigo-100/50');
+                    tabTemplateSelection.classList.remove('text-slate-500', 'hover:text-slate-700', 'hover:bg-white/60');
+                    tabFileUpload.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm', 'border-indigo-100/50');
+                    tabFileUpload.classList.add('text-slate-500', 'hover:text-slate-700', 'hover:bg-white/60');
+                    
+                    // 切换内容视图
+                    templateSelectionView.classList.remove('hidden');
+                    fileUploadView.classList.add('hidden');
+                    
+                    // 确保模板已渲染
+                    renderTemplates();
+                });
             }
 
             
@@ -1739,106 +1769,6 @@
             buildRawDataPreview();
             
             showNotification('信息', `文件 "${fileName}" 已移除`, 'info');
-        }
-
-        // 加载示例数据
-        function loadExampleData() {
-            // 如果已有数据，提示用户
-            if (appData.files.length > 0) {
-                if (!confirm('加载示例数据将清除当前已上传的所有文件，是否继续？')) {
-                    return;
-                }
-            }
-
-            // 清除当前数据
-            removeAllFiles({ silent: true, force: true });
-            
-            // 构造模拟数据（标准24小时负荷数据）
-            const fileName = '示例负荷数据.csv';
-            const headers = ['日期', '计量点编号', '0:00', '1:00', '2:00', '3:00', '4:00', '5:00', '6:00', '7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
-            
-            const generateDailyLoad = (base, noise) => {
-                return Array.from({length: 24}, (_, i) => {
-                    // 模拟典型的双峰负荷曲线
-                    const hour = i;
-                    let factor = 0.5;
-                    if (hour >= 8 && hour <= 12) factor = 0.8 + Math.random() * 0.2; // 上午峰
-                    else if (hour >= 13 && hour <= 17) factor = 0.7 + Math.random() * 0.1; // 下午平
-                    else if (hour >= 18 && hour <= 21) factor = 0.9 + Math.random() * 0.1; // 晚高峰
-                    else if (hour >= 22 || hour <= 5) factor = 0.3 + Math.random() * 0.1; // 深夜谷
-                    return (base * factor + (Math.random() - 0.5) * noise).toFixed(2);
-                });
-            };
-
-            const mockRows = [headers];
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - 7); // 从7天前开始
-
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(date.getDate() + i);
-                const dateStr = date.toISOString().split('T')[0];
-                
-                // 模拟两个不同的计量点
-                mockRows.push([dateStr, 'MP001', ...generateDailyLoad(1000, 50)]);
-                mockRows.push([dateStr, 'MP002', ...generateDailyLoad(1500, 80)]);
-            }
-
-            // 模拟文件对象添加到 appData
-            const fileInfo = {
-                name: fileName,
-                size: 1024,
-                type: 'text/csv',
-                status: 'success',
-                progress: 100,
-                id: 'example_' + Date.now()
-            };
-
-            appData.files.push(fileInfo);
-            appData.parsedData.push({
-                fileName: fileName,
-                sheets: [{
-                    name: 'Sheet1',
-                    data: mockRows
-                }]
-            });
-
-            // 渲染 UI
-            renderFileList();
-            setImportStatus('success');
-            updateStepStatus(1, true);
-            
-            // 自动配置常用选项
-            appData.config.dateColumn = '日期';
-            appData.config.dataStartColumn = '0:00';
-            appData.config.dataEndColumn = '23:00';
-            appData.config.meteringPointColumn = '计量点编号';
-            appData.config.timeInterval = 60;
-            
-            // 手动触发一次 UI 更新和数据处理
-            setTimeout(() => {
-                // 更新下拉框选项
-                populateColumnSelects(headers, mockRows);
-                
-                // 设置下拉框初始值（根据索引，因为 populateColumnSelects 使用的是索引作为 value）
-                elements.dateColumnSelect.value = "0";
-                elements.dataStartColumnSelect.value = "2";
-                elements.dataEndColumnSelect.value = "25";
-                elements.meteringPointColumnSelect.value = "1";
-                elements.timeIntervalSelect.value = "60";
-
-                // 同时更新 appData.config 中的索引值
-                appData.config.dateColumn = "0";
-                appData.config.dataStartColumn = "2";
-                appData.config.dataEndColumn = "25";
-                appData.config.meteringPointColumn = "1";
-                
-                // 处理数据
-                reprocessDataWithConfig();
-                
-                // 提示用户
-                showNotification('成功', '示例数据已加载，包含过去7天的模拟负荷。', 'success');
-            }, 100);
         }
 
         // 重置所有文件和数据
@@ -3350,24 +3280,40 @@
         // 渲染数据预览界面
         function renderDataPreview() {
             const dataStructure = document.querySelector('input[name="dataStructure"]:checked')?.value || 'columnToRow';
+            const totalRecords = appData.processedData.length;
             
-            // 移除等待状态样式并显示按钮
-            if (elements.dataPreview) {
-                elements.dataPreview.classList.remove('bg-white', 'border', 'border-slate-200', 'shadow-sm');
-                if (elements.previewButtons) {
-                    elements.previewButtons.classList.remove('hidden');
-                }
-            }
+            // 更新顶部 Header 的统计信息
+            buildDataSummaryHeader();
             
-            // 构建新的预览界面 - 扁平化设计
+            // 构建预览内容
             let previewHtml = `
-                <div class="flex flex-col gap-6 p-6">
-                    <!-- 头部摘要 -->
-                    ${buildDataSummaryHeader()}
-                    
-                    <!-- 数据表格容器 -->
-                    <div class="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+                <div class="px-6 pb-6 pt-4">
+                    <!-- 数据表格 -->
+                    <div class="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm mb-4">
                         ${buildDataTable(dataStructure)}
+                    </div>
+                    
+                    <!-- 底部工具栏与统计 -->
+                    <div class="flex items-center justify-between px-1">
+                        <div class="text-[11px] font-bold text-slate-400 italic">
+                            共 ${totalRecords.toLocaleString()} 条记录。
+                        </div>
+                        
+                        <div class="flex items-center gap-3">
+                            <button id="previewFirstHourCalculation" class="flex items-center gap-3 px-5 py-2.5 rounded-xl border border-slate-100 bg-white shadow-sm hover:border-indigo-200 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+                                <div class="grid h-8 w-8 place-items-center rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                    <i class="fa fa-calculator text-xs"></i>
+                                </div>
+                                <span class="text-xs font-extrabold text-slate-600">首小时计算结果</span>
+                            </button>
+                            
+                            <button id="previewFirstDayCalculation" class="flex items-center gap-3 px-5 py-2.5 rounded-xl border border-slate-100 bg-white shadow-sm hover:border-indigo-200 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+                                <div class="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                    <i class="fa fa-calendar-day text-xs"></i>
+                                </div>
+                                <span class="text-xs font-extrabold text-slate-600">首日计算结果</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -3387,6 +3333,8 @@
             // 更新页面顶部的 headerDateRange 和 headerInterval
             const headerDateRangeEl = document.getElementById('headerDateRange');
             const headerIntervalEl = document.getElementById('headerInterval');
+            const previewRecordCountHeader = document.getElementById('previewRecordCountHeader');
+            const lastUpdateTimeEl = document.getElementById('lastUpdateTime');
             
             if (headerDateRangeEl) headerDateRangeEl.textContent = dateRange;
             if (headerIntervalEl) {
@@ -3394,49 +3342,17 @@
                 headerIntervalEl.textContent = intervalText;
             }
             
-            return `
-                <div class="flex flex-col gap-6">
-                    <!-- 顶部栏：标题 + 状态 -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
-                                <i class="fa fa-table-list text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-black text-slate-900 tracking-tight">数据预览</h3>
-                                <p class="text-sm font-medium text-slate-500 mt-0.5">用于快速核对解析结果</p>
-                            </div>
-                        </div>
-                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-xl border border-white/60 shadow-sm backdrop-blur-sm">
-                            <span class="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <span class="text-[11px] font-black text-slate-600 uppercase tracking-wider">数据解析就绪</span>
-                        </div>
-                    </div>
-
-                    <!-- 统计卡片区 -->
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <!-- 总记录数 -->
-                        <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm transition-all hover:shadow-md">
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">总记录数</div>
-                            <div class="text-2xl font-black text-slate-900 tabular-nums">${totalRecords.toLocaleString()} <span class="text-sm font-bold text-slate-400 ml-1">条</span></div>
-                        </div>
-                        <!-- 时间范围 -->
-                        <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm transition-all hover:shadow-md">
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">时间范围</div>
-                            <div class="text-lg font-extrabold text-slate-900 truncate" title="${dateRange}">${dateRange}</div>
-                        </div>
-                        <!-- 数据结构 -->
-                        <div class="rounded-2xl bg-white border border-slate-200 p-5 shadow-sm transition-all hover:shadow-md">
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">数据结构</div>
-                            <div class="text-lg font-extrabold text-slate-900">${getDataStructureLabel()}</div>
-                        </div>
-                    </div>
-                </div>`;
+            // 更新全新的数据预览头部
+            if (previewRecordCountHeader) previewRecordCountHeader.textContent = totalRecords.toLocaleString();
+            if (lastUpdateTimeEl) lastUpdateTimeEl.textContent = new Date().toLocaleTimeString();
+            
+            // 返回空字符串，因为核心指标已经移到了顶部的 Header 中，避免割裂感
+            return '';
         }
         
         // 构建数据表格
          function buildDataTable(dataStructure) {
-             let tableHtml = `<div class="max-h-[420px] overflow-auto bg-white/50 backdrop-blur-sm">`;
+             let tableHtml = `<div class="max-h-[420px] overflow-auto bg-white">`;
              
              if (dataStructure === 'columnToRow') {
                  tableHtml += buildHourlyDataTable();
@@ -3448,54 +3364,120 @@
              return tableHtml;
          }
          
-         // 构建24小时数据表格
-         function buildHourlyDataTable() {
-             let tableHtml = `<div class="grid" style="grid-template-columns: 140px repeat(24, 84px) 140px; min-width: fit-content; content-visibility: auto;">`;
-
-             // 表头
-             tableHtml += `<div class=\"bg-slate-50/90 border-b border-slate-200 px-4 py-4 text-left text-xs font-extrabold text-slate-500 sticky top-0 left-0 z-30 backdrop-blur-sm\">日期</div>`;
-             for (let hour = 0; hour < 24; hour++) {
-                tableHtml += `<div class=\"bg-slate-50/90 border-b border-slate-200 px-2 py-4 text-center text-xs font-extrabold text-slate-500 sticky top-0 z-20 backdrop-blur-sm\">${hour}:00</div>`;
+        // 构建24小时数据表格
+        function buildHourlyDataTable() {
+            if (appData.processedData.length === 0) {
+                const tableScrollHint = document.getElementById('tableScrollHint');
+                if (tableScrollHint) tableScrollHint.classList.add('hidden');
+                
+                return `
+                    <div class="flex flex-col items-center justify-center py-16 text-center bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-dashed border-slate-200">
+                        <div class="w-16 h-16 mb-5 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-300 shadow-sm">
+                            <i class="fa fa-table text-2xl"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-slate-700 mb-2">等待数据导入</h3>
+                        <p class="text-sm text-slate-400 max-w-[220px] leading-relaxed">
+                            导入数据后，系统将自动识别并在此展示实时预览
+                        </p>
+                    </div>
+                `;
             }
-             tableHtml += `<div class=\"bg-slate-50/90 border-b border-slate-200 px-3 py-4 text-center text-xs font-extrabold text-slate-500 sticky top-0 z-20 backdrop-blur-sm\">日总 (kWh)</div>`;
 
-             const totalRows = appData.processedData.length;
-             const headLimit = 25;
-             const tailLimit = 25;
-             const showEllipsis = totalRows > headLimit + tailLimit;
+            // 显示滚动提示
+            const tableScrollHint = document.getElementById('tableScrollHint');
+            if (tableScrollHint) tableScrollHint.classList.remove('hidden');
 
-            // 渲染单行数据的辅助函数
+            // 定义 z-index 层级常量，确保层叠关系正确
+            const Z_INDEX = {
+                BODY: 'z-0',
+                LEFT_COL: 'z-20',
+                TOP_HEADER: 'z-30',
+                CORNER_HEADER: 'z-50', // 左上角固定 - 最高级
+                SUMMARY_ROW: 'z-40',   // 底部汇总行
+                SUMMARY_CORNER: 'z-[51]' // 底部左侧固定 - 必须高于汇总行和左侧列
+            };
+
+            let tableHtml = `<div class="grid" style="grid-template-columns: 140px repeat(24, 84px) 140px; min-width: fit-content; content-visibility: auto; row-gap: 0;">`;
+
+            // --- 表头部分 ---
+            // 左上角“日期”单元格 - 最高层级，使用纯色背景防止透视
+            tableHtml += `<div class="bg-slate-50 border-b-2 border-slate-200 px-4 py-4 text-left text-[11px] font-black text-slate-500 sticky top-0 left-0 ${Z_INDEX.CORNER_HEADER}">日期</div>`;
+            
+            // 24小时小时表头
+            for (let hour = 0; hour < 24; hour++) {
+                tableHtml += `<div class="bg-slate-50 border-b-2 border-slate-200 px-2 py-4 text-center text-[11px] font-black text-slate-500 sticky top-0 ${Z_INDEX.TOP_HEADER}">${hour}:00</div>`;
+            }
+            
+            // 右侧“日总”表头
+            tableHtml += `<div class="bg-slate-50 border-b-2 border-slate-200 px-3 py-4 text-right text-[11px] font-black text-slate-500 sticky top-0 ${Z_INDEX.TOP_HEADER} pr-6">日总 (kWh)</div>`;
+
+            const totalRows = appData.processedData.length;
+            const headLimit = 25;
+            const tailLimit = 25;
+            const showEllipsis = totalRows > headLimit + tailLimit;
+
+            // --- 渲染单行数据的辅助函数 ---
             const renderRow = (row, index, rowIndex, isSummary = false) => {
                 const isCumulative = isSummary && row.date === '累计汇总';
-                const rowBgClass = isSummary 
-                    ? (isCumulative ? 'bg-slate-100/95 font-bold' : 'bg-slate-50/95 font-bold') 
-                    : (rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50');
+                const isAverage = isSummary && row.date === '平均数值';
                 
-                const borderClass = isSummary ? 'border-t-2 border-slate-200' : 'border-b border-slate-100';
-                const stickyClass = isSummary ? 'sticky bottom-0 z-40 backdrop-blur-md' : '';
-                const stickyOffset = isSummary && row.date === '平均数值' ? 'bottom-0' : (isSummary ? 'bottom-[37px]' : '');
+                // 行背景色 - 彻底移除半透明，解决用户提到的“透视”问题
+                let rowBgClass = '';
+                if (isSummary) {
+                    rowBgClass = isCumulative ? 'bg-indigo-50' : 'bg-slate-50';
+                } else {
+                    rowBgClass = rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+                }
+                
+                // 边框样式 - 汇总行顶部增加一条明显的线，明确区域划分
+                const borderClass = isSummary 
+                    ? (isCumulative ? 'border-t border-slate-200' : 'border-t border-slate-100') 
+                    : 'border-b border-slate-100';
+                
+                // 汇总行特殊样式 - 移除 backdrop-blur 避免性能消耗和视觉残留
+                const summaryShadow = isSummary ? 'shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.05)]' : ''; 
+                const stickyRowClass = isSummary ? 'sticky bottom-0' : '';
+                
+                // 调整偏移量，确保两行汇总行能够堆叠
+                const stickyRowOffset = isAverage ? 'bottom-0' : (isCumulative ? 'bottom-[53px]' : '');
+                const zIndexRow = isSummary ? Z_INDEX.SUMMARY_ROW : Z_INDEX.BODY;
+                const zIndexLeft = isSummary ? Z_INDEX.SUMMARY_CORNER : Z_INDEX.LEFT_COL;
+
                 let rowHtml = '';
 
-                // 日期列 (冻结首列)
-                rowHtml += `<div class="${rowBgClass} ${borderClass} px-4 py-3.5 text-left text-xs font-bold text-slate-700 sticky left-0 z-30 ${stickyClass} ${stickyOffset}" data-date="${row.date || ''}">${row.date}</div>`;
+                // 1. 日期列 (冻结首列)
+                const dateFontClass = isSummary ? 'font-black' : 'font-bold';
+                const dateTextClass = isSummary ? (isCumulative ? 'text-indigo-900' : 'text-slate-700') : 'text-slate-700';
+                
+                rowHtml += `<div class="${rowBgClass} ${borderClass} ${summaryShadow} px-4 py-4 text-left text-xs ${dateFontClass} ${dateTextClass} sticky left-0 ${zIndexLeft} ${stickyRowClass} ${stickyRowOffset}">${row.date}</div>`;
 
-                // 24小时数据列
+                // 2. 24小时数据列
                 let dayTotal = 0;
                 for (let hour = 0; hour < 24; hour++) {
                     const value = row.hourlyData[hour];
                     const displayValue = (value !== null && value !== undefined) ? value.toFixed(2) : '-';
-                    const textClass = isSummary ? 'text-slate-900' : ((value !== null && value !== undefined) ? 'text-slate-700' : 'text-slate-300');
                     
-                    rowHtml += `<div class="${rowBgClass} ${borderClass} px-2 py-3.5 text-center text-xs font-medium ${textClass} ${stickyClass} ${stickyOffset}">${displayValue}</div>`;
+                    // 数值样式
+                    let textClass = '';
+                    if (isSummary) {
+                        textClass = isCumulative ? 'text-indigo-900' : 'text-slate-800';
+                    } else {
+                        textClass = (value !== null && value !== undefined) ? 'text-slate-600' : 'text-slate-300';
+                    }
+                    const fontClass = isSummary ? 'font-black' : 'font-medium';
+                    
+                    rowHtml += `<div class="${rowBgClass} ${borderClass} ${summaryShadow} px-2 py-4 text-right text-xs ${fontClass} ${textClass} ${zIndexRow} ${stickyRowClass} ${stickyRowOffset} tabular-nums">${displayValue}</div>`;
+                    
                     if (value !== null && value !== undefined) {
                         dayTotal += value;
                     }
                 }
 
-                // 日总电能列
+                // 3. 日总电能列
                 const totalValue = row.total !== undefined ? row.total : dayTotal;
-                const totalTextClass = isSummary ? 'text-indigo-700' : 'text-indigo-600';
-                rowHtml += `<div class="${rowBgClass} ${borderClass} px-3 py-3.5 text-center text-xs font-bold ${totalTextClass} ${stickyClass} ${stickyOffset}">${totalValue.toFixed(2)}</div>`;
+                const totalTextClass = isSummary ? (isCumulative ? 'text-indigo-700' : 'text-indigo-600') : 'text-indigo-600';
+                rowHtml += `<div class="${rowBgClass} ${borderClass} ${summaryShadow} px-3 py-4 text-right text-xs font-black ${totalTextClass} ${zIndexRow} ${stickyRowClass} ${stickyRowOffset} tabular-nums pr-6">${totalValue.toFixed(2)}</div>`;
+                
                 return rowHtml;
             };
 
@@ -3560,14 +3542,7 @@
             tableHtml += renderRow(avgRow, -2, totalRows + 1, true);
 
             tableHtml += `</div>`;
-
-             // 数据提示
-             if (totalRows > headLimit + tailLimit) {
-                tableHtml += `<div class=\"px-4 py-2 text-xs text-slate-500 bg-slate-50 border border-t-0 border-slate-200\">预览显示前 ${headLimit} 行和后 ${tailLimit} 行（共 ${totalRows} 条记录）。</div>`;
-             } else {
-                tableHtml += `<div class=\"px-4 py-2 text-xs text-slate-500 bg-slate-50 border border-t-0 border-slate-200\">共 ${totalRows} 条记录。</div>`;
-             }
-             return tableHtml;
+            return tableHtml;
          }
          
          // 构建汇总数据表格
@@ -3778,16 +3753,33 @@
                       this.classList.add('bg-indigo-50', 'text-indigo-700', 'ring-2', 'ring-indigo-500', 'ring-inset');
                   });
               });
+
+              // 重新绑定计算结果按钮事件（因为它们是动态生成的）
+              const firstHourBtn = document.getElementById('previewFirstHourCalculation');
+              const firstDayBtn = document.getElementById('previewFirstDayCalculation');
+              
+              if (firstHourBtn) {
+                  firstHourBtn.addEventListener('click', previewFirstHourCalculation);
+              }
+              if (firstDayBtn) {
+                  firstDayBtn.addEventListener('click', previewFirstDayCalculation);
+              }
+
+              // 更新按钮启用状态
+              updatePreviewButtons();
           }
           
           // 更新按钮状态
           function updatePreviewButtons() {
-              if (appData.parsedData.length > 0) {
-                  elements.previewFirstHourCalculationBtn.disabled = false;
-                  elements.previewFirstDayCalculationBtn.disabled = false;
+              const firstHourBtn = document.getElementById('previewFirstHourCalculation');
+              const firstDayBtn = document.getElementById('previewFirstDayCalculation');
+              
+              if (appData.processedData.length > 0) {
+                  if (firstHourBtn) firstHourBtn.disabled = false;
+                  if (firstDayBtn) firstDayBtn.disabled = false;
               } else {
-                  elements.previewFirstHourCalculationBtn.disabled = true;
-                  elements.previewFirstDayCalculationBtn.disabled = true;
+                  if (firstHourBtn) firstHourBtn.disabled = true;
+                  if (firstDayBtn) firstDayBtn.disabled = true;
               }
           }
         
@@ -5563,25 +5555,26 @@ async function distributeStagnantEnergy() {
                 noDataMessageElement.classList.add('hidden');
             }
 
-            // 获取图表配置
-            const lineStyle = appData.visualization.lineStyle;
-            const showPoints = appData.visualization.showPoints;
-            const secondaryAxis = appData.visualization.secondaryAxis;
-            
-            // 更新X轴标签范围
-            const startHour = appData.visualization.focusStartTime;
-            const endHour = appData.visualization.focusEndTime;
-            
-            const newLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`).slice(startHour, endHour + 1);
-            appData.chart.data.labels = newLabels;
-            
-            // ---------------------------------------------------------
-            // 3. 构建数据集 (新增发电曲线逻辑)
-            // ---------------------------------------------------------
-            const datasets = [];
-            
-            // 如果是汇总模式...
-            if (appData.visualization.summaryMode) {
+            try {
+                // 获取图表配置
+                const lineStyle = appData.visualization.lineStyle;
+                const showPoints = appData.visualization.showPoints;
+                const secondaryAxis = appData.visualization.secondaryAxis;
+                
+                // 更新X轴标签范围
+                const startHour = appData.visualization.focusStartTime;
+                const endHour = appData.visualization.focusEndTime;
+                
+                const newLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`).slice(startHour, endHour + 1);
+                appData.chart.data.labels = newLabels;
+                
+                // ---------------------------------------------------------
+                // 3. 构建数据集 (新增发电曲线逻辑)
+                // ---------------------------------------------------------
+                const datasets = [];
+                
+                // 如果是汇总模式...
+                if (appData.visualization.summaryMode) {
                 // ... (汇总模式逻辑保持不变，后续需要确保它使用正向数据)
                 // 获取选中的日期范围
                 const dates = appData.processedData.map(d => d.date).sort();
@@ -5623,12 +5616,20 @@ async function distributeStagnantEnergy() {
                     const minDaySeries = sliceData(minDay.hourlyData);
                     
                     // 辅助函数：创建数据集
-                    const makeDataset = (label, data, color, borderDash = []) => {
+                    const makeDataset = (label, data, color, borderDash = [], isSummary = false) => {
                         const curveCount = appData.processedData.length;
                         let width = 2;
-                        if (curveCount > 50) width = 0.8;
-                        else if (curveCount > 30) width = 1.2;
-                        else if (curveCount > 10) width = 1.6;
+                        
+                        if (isSummary) {
+                            // 汇总曲线始终保持较粗的线条，突出显示
+                            width = 4;
+                        } else {
+                            // 明细曲线根据数量动态调整
+                            if (curveCount > 50) width = 0.8;
+                            else if (curveCount > 30) width = 1.2;
+                            else if (curveCount > 10) width = 1.6;
+                            else width = 2.4;
+                        }
 
                         return {
                             label,
@@ -5636,8 +5637,8 @@ async function distributeStagnantEnergy() {
                             borderColor: color,
                             backgroundColor: color,
                             borderWidth: width,
-                            pointRadius: showPoints ? (curveCount > 30 ? 1 : 3) : 0,
-                            pointHoverRadius: 5,
+                            pointRadius: showPoints ? (isSummary ? 4 : (curveCount > 30 ? 1 : 3)) : 0,
+                            pointHoverRadius: isSummary ? 7 : 5,
                             fill: false,
                             tension: 0.4,
                             borderDash,
@@ -5673,20 +5674,20 @@ async function distributeStagnantEnergy() {
 
                     // 1. 最高/最低用电日 + 平均负荷 (extreme)
                     if (subMode === 'all' || subMode === 'extreme') {
-                        datasets.push(makeDataset(`最高用电日 (${formatDateForInput(maxDay.dateObj)})`, maxDaySeries, 'rgb(220, 38, 38)'));  // 红色-最高
-                        datasets.push(makeDataset(`最低用电日 (${formatDateForInput(minDay.dateObj)})`, minDaySeries, 'rgb(37, 99, 235)'));   // 蓝色-最低
+                        datasets.push(makeDataset(`最高用电日 (${formatDateForInput(maxDay.dateObj)})`, maxDaySeries, 'rgb(220, 38, 38)', [], true));  // 红色-最高
+                        datasets.push(makeDataset(`最低用电日 (${formatDateForInput(minDay.dateObj)})`, minDaySeries, 'rgb(37, 99, 235)', [], true));   // 蓝色-最低
                         
                         // 计算全局平均负荷
                         const globalAvgSeries = sliceData(avgSeries(days));
-                        datasets.push(makeDataset('全周期平均负荷', globalAvgSeries, 'rgb(71, 85, 105)', [8, 4])); // 深灰-平均
+                        datasets.push(makeDataset('全周期平均负荷', globalAvgSeries, 'rgb(71, 85, 105)', [8, 4], true)); // 深灰-平均
                     }
                     
                     // 2. 季度平均 (quarter)
                     if (subMode === 'all' || subMode === 'quarter') {
-                        datasets.push(makeDataset('Q1平均(1-3月)', q1Series, 'rgb(5, 150, 105)', [6, 4]));      // 绿色-春季
-                        datasets.push(makeDataset('Q2平均(4-6月)', q2Series, 'rgb(245, 158, 11)', [6, 4]));     // 琥珀色-夏季
-                        datasets.push(makeDataset('Q3平均(7-9月)', q3Series, 'rgb(234, 88, 12)', [6, 4]));      // 橙色-秋季
-                        datasets.push(makeDataset('Q4平均(10-12月)', q4Series, 'rgb(30, 64, 175)', [6, 4]));    // 深蓝-冬季
+                        datasets.push(makeDataset('Q1平均(1-3月)', q1Series, 'rgb(5, 150, 105)', [6, 4], true));      // 绿色-春季
+                        datasets.push(makeDataset('Q2平均(4-6月)', q2Series, 'rgb(245, 158, 11)', [6, 4], true));     // 琥珀色-夏季
+                        datasets.push(makeDataset('Q3平均(7-9月)', q3Series, 'rgb(234, 88, 12)', [6, 4], true));      // 橙色-秋季
+                        datasets.push(makeDataset('Q4平均(10-12月)', q4Series, 'rgb(30, 64, 175)', [6, 4], true));    // 深蓝-冬季
                     }
 
                     // 3. 月平均 (month)
@@ -5694,7 +5695,7 @@ async function distributeStagnantEnergy() {
                         for (let m = 1; m <= 12; m++) {
                             if (monthSeries[m - 1].some(v => v !== null)) {
                                 datasets.push(
-                                    makeDataset(`${m}月平均`, monthSeries[m - 1], monthColors[m - 1], [4, 2])
+                                    makeDataset(`${m}月平均`, monthSeries[m - 1], monthColors[m - 1], [4, 2], true)
                                 );
                             }
                         }
@@ -5703,7 +5704,13 @@ async function distributeStagnantEnergy() {
                 
             } else {
                 // 明细模式：绘制所选日期的曲线
-                const selectedDates = appData.visualization.selectedDates || [];
+                let selectedDates = appData.visualization.selectedDates || [];
+                
+                // 性能保护：限制显示的曲线数量
+                if (selectedDates.length > 100) {
+                    showNotification('性能提示', `已自动限制显示前100条曲线（共 ${selectedDates.length} 条）以保证流畅度`, 'warning');
+                    selectedDates = selectedDates.slice(0, 100);
+                }
                 
                 selectedDates.forEach((date, index) => {
                     const dayData = appData.processedData.find(d => d.date === date);
@@ -5715,14 +5722,14 @@ async function distributeStagnantEnergy() {
                         
                         // 根据曲线数量动态调整线宽
                         const curveCount = selectedDates.length;
-                        let dynamicBorderWidth = 2.5;
+                        let dynamicBorderWidth = 2.8;
                         let dynamicPointRadius = appData.visualization.showPoints ? 3 : 0;
 
                         if (curveCount > 30) {
-                            dynamicBorderWidth = 1;
+                            dynamicBorderWidth = 1.2;
                             dynamicPointRadius = appData.visualization.showPoints ? 1.5 : 0;
                         } else if (curveCount > 10) {
-                            dynamicBorderWidth = 1.5;
+                            dynamicBorderWidth = 1.8;
                             dynamicPointRadius = appData.visualization.showPoints ? 2 : 0;
                         }
 
@@ -5787,15 +5794,21 @@ async function distributeStagnantEnergy() {
             // 但如果已经处于 summaryMode，则不需要重复计算，因为 updateDataOverview 会处理
             // 这里主要处理图表更新后的联动（如需要）
             
-            // 隐藏加载状态
-            if (chartLoadingElement) chartLoadingElement.classList.add('hidden');
-
             // 更新统计信息
             updateStatistics(getOverviewData(), startHour, endHour);
 
             // 更新步骤 3 状态
             updateStepStatus(3, true);
+        } catch (error) {
+            console.error('图表更新失败:', error);
+            showNotification('更新失败', '图表渲染过程中出现错误', 'error');
+        } finally {
+            // 确保加载状态最终被隐藏
+            if (chartLoadingElement) {
+                chartLoadingElement.classList.add('hidden');
+            }
         }
+    }
             
 
         
@@ -6848,136 +6861,127 @@ async function distributeStagnantEnergy() {
 
                     <!-- 核心指标卡片 (Glassmorphism) -->
                     <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 ${gridColsClass}">
-                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-blue-200/60">
+                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-blue-200/60 hover:-translate-y-1">
                             <div class="relative z-10">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
-                                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">时段总用电</div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">时段总用电</div>
+                                    </div>
+                                    <i class="fa fa-bolt text-blue-100 text-lg"></i>
                                 </div>
                                 <div class="mt-2 flex items-baseline gap-1">
-                                    <span class="text-xl font-black text-slate-900">${formatNum(totalPeriodAll)}</span>
+                                    <span class="text-2xl font-black text-slate-900 tracking-tight">${formatNum(totalPeriodAll)}</span>
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">kWh</span>
                                 </div>
-                                <div class="mt-1 text-[9px] text-slate-400 font-medium">选定时段内的累计用电总量</div>
-                            </div>
-                            <div class="absolute -right-2 -bottom-2 text-blue-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
-                                <i class="fa fa-bolt"></i>
+
                             </div>
                         </div>
 
                         ${hasGenerationData ? `
-                        <div class="group relative overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/30 p-5 shadow-sm transition-all hover:shadow-md hover:border-emerald-300">
+                        <div class="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/20 p-5 shadow-sm transition-all hover:shadow-md hover:border-emerald-200 hover:-translate-y-1">
                             <div class="relative z-10">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                                    <div class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">上网电量 (估算)</div>
-                                    <div class="group/note relative">
-                                        <i class="fa fa-circle-info text-[10px] text-emerald-400 cursor-help"></i>
-                                        <div class="absolute bottom-full left-0 mb-2 hidden group-hover/note:block w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg shadow-xl z-50 leading-relaxed">
-                                            <p class="font-bold mb-1">上网电量说明：</p>
-                                            上网电量（发电量）统计来源于数据源中的负值（反向负载），计算逻辑为：筛选负值得到。
-                                        </div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                                        <div class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">上网电量 (估算)</div>
                                     </div>
+                                    <i class="fa fa-solar-panel text-emerald-100 text-lg"></i>
                                 </div>
                                 <div class="mt-2 flex items-baseline gap-1">
-                                    <span class="text-xl font-black text-emerald-700">${formatNum(totalPeriodGenerationAll)}</span>
+                                    <span class="text-2xl font-black text-emerald-700 tracking-tight">${formatNum(totalPeriodGenerationAll)}</span>
                                     <span class="text-[10px] font-bold text-emerald-500 uppercase">kWh</span>
                                 </div>
-                                <div class="mt-1 text-[9px] text-emerald-600/60 font-medium">选定时段内的累计上网电量</div>
-                            </div>
-                            <div class="absolute -right-2 -bottom-2 text-emerald-200/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
-                                <i class="fa fa-solar-panel"></i>
+
                             </div>
                         </div>` : ''}
 
-                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-indigo-200/60">
+                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-indigo-200/60 hover:-translate-y-1">
                             <div class="relative z-10">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
-                                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">全部日总用电</div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
+                                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">全部日总用电</div>
+                                    </div>
+                                    <i class="fa fa-calendar-alt text-indigo-100 text-lg"></i>
                                 </div>
                                 <div class="mt-2 flex items-baseline gap-1">
-                                    <span class="text-xl font-black text-slate-900">${formatNum(totalDailyAll)}</span>
+                                    <span class="text-2xl font-black text-slate-900 tracking-tight">${formatNum(totalDailyAll)}</span>
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">kWh</span>
                                 </div>
-                                <div class="mt-1 text-[9px] text-slate-400 font-medium">所选日期范围内的全天总用电</div>
-                            </div>
-                            <div class="absolute -right-2 -bottom-2 text-indigo-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
-                                <i class="fa fa-calendar-alt"></i>
+
                             </div>
                         </div>
                     `;
 
                     // 时段占比卡片 - 语义化颜色
                     const getPctCardStyles = (pct) => {
-                        if (pct >= 80) return { border: 'hover:border-rose-200', dot: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]', icon: 'text-rose-50/40', text: 'text-rose-600' };
-                        if (pct >= 50) return { border: 'hover:border-orange-200', dot: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]', icon: 'text-orange-50/40', text: 'text-orange-600' };
-                        if (pct >= 20) return { border: 'hover:border-amber-200', dot: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]', icon: 'text-amber-50/40', text: 'text-amber-600' };
-                        return { border: 'hover:border-emerald-200', dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]', icon: 'text-emerald-50/40', text: 'text-emerald-600' };
+                        if (pct >= 80) return { border: 'hover:border-rose-200', dot: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]', icon: 'text-rose-100', text: 'text-rose-600', bar: 'bg-rose-500' };
+                        if (pct >= 50) return { border: 'hover:border-orange-200', dot: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]', icon: 'text-orange-100', text: 'text-orange-600', bar: 'bg-orange-500' };
+                        if (pct >= 20) return { border: 'hover:border-amber-200', dot: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]', icon: 'text-amber-100', text: 'text-amber-600', bar: 'bg-amber-500' };
+                        return { border: 'hover:border-emerald-200', dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]', icon: 'text-emerald-100', text: 'text-emerald-600', bar: 'bg-emerald-500' };
                     };
                     const pctStyles = getPctCardStyles(overallPeriodPercentage);
 
                     html += `
-                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md ${pctStyles.border}">
+                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md ${pctStyles.border} hover:-translate-y-1">
                             <div class="relative z-10">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full ${pctStyles.dot}"></span>
-                                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">时段占比</div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-1.5 w-1.5 rounded-full ${pctStyles.dot}"></span>
+                                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">时段占比</div>
+                                    </div>
+                                    <i class="fa fa-percentage ${pctStyles.icon} text-lg"></i>
                                 </div>
                                 <div class="mt-2">
-                                    <span class="text-xl font-black ${pctStyles.text}">${formatPct(overallPeriodPercentage)}</span>
+                                    <span class="text-2xl font-black ${pctStyles.text} tracking-tight">${formatPct(overallPeriodPercentage)}</span>
                                 </div>
-                                <div class="mt-1 text-[9px] text-slate-400 font-medium">时段用电占全天总用电的比例</div>
-                            </div>
-                            <div class="absolute -right-2 -bottom-2 ${pctStyles.icon} text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
-                                <i class="fa fa-percentage"></i>
+
                             </div>
                         </div>
 
-                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-cyan-200/60">
+                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-cyan-200/60 hover:-translate-y-1">
                             <div class="relative z-10">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></span>
-                                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">平均每小时</div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></span>
+                                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">平均每小时</div>
+                                    </div>
+                                    <i class="fa fa-clock text-cyan-100 text-lg"></i>
                                 </div>
                                 <div class="mt-2 flex items-baseline gap-1">
-                                    <span class="text-xl font-black text-slate-900">${formatNum(avgHourlyInPeriod)}</span>
+                                    <span class="text-2xl font-black text-slate-900 tracking-tight">${formatNum(avgHourlyInPeriod)}</span>
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">kWh</span>
                                 </div>
-                                <div class="mt-1 text-[9px] text-slate-400 font-medium">选定时段内平均每小时的负荷</div>
-                            </div>
-                            <div class="absolute -right-2 -bottom-2 text-cyan-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
-                                <i class="fa fa-clock"></i>
+
                             </div>
                         </div>
 
-                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-rose-200">
+                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-rose-200 hover:-translate-y-1">
                             <div class="relative z-10">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>
-                                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">最大时段日</div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>
+                                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">最大时段日</div>
+                                    </div>
+                                    <i class="fa fa-arrow-trend-up text-rose-100 text-lg"></i>
                                 </div>
-                                <div class="mt-2 truncate text-sm font-black text-slate-900" title="${maxPeriodKey}">${maxPeriodKey}</div>
-                                <div class="text-[10px] font-bold text-rose-500">${formatNum(maxPeriodTotal)} kWh</div>
-                                <div class="mt-1 text-[9px] text-slate-400 font-medium">时段内用电量最高的一天</div>
-                            </div>
-                            <div class="absolute -right-2 -bottom-2 text-rose-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
-                                <i class="fa fa-arrow-trend-up"></i>
+                                <div class="mt-2 truncate text-base font-black text-slate-900" title="${maxPeriodKey}">${maxPeriodKey}</div>
+                                <div class="text-xs font-bold text-rose-500">${formatNum(maxPeriodTotal)} kWh</div>
                             </div>
                         </div>
 
-                        <div class="group relative overflow-hidden rounded-2xl border border-amber-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-amber-200">
+                        <div class="group relative overflow-hidden rounded-2xl border border-amber-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-amber-300 hover:-translate-y-1">
                             <div class="relative z-10">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
-                                    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">最小时段日</div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
+                                        <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">最小时段日</div>
+                                    </div>
+                                    <i class="fa fa-arrow-trend-down text-amber-100 text-lg"></i>
                                 </div>
-                                <div class="mt-2 truncate text-sm font-black text-slate-900" title="${minPeriodKey}">${minPeriodKey}</div>
-                                <div class="text-[10px] font-bold text-amber-500">${formatNum(minPeriodTotal)} kWh</div>
-                                <div class="mt-1 text-[9px] text-slate-400 font-medium">时段内用电量最低的一天</div>
-                            </div>
-                            <div class="absolute -right-2 -bottom-2 text-amber-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
-                                <i class="fa fa-arrow-trend-down"></i>
+                                <div class="mt-2 truncate text-base font-black text-slate-900" title="${minPeriodKey}">${minPeriodKey}</div>
+                                <div class="text-xs font-bold text-amber-500">${formatNum(minPeriodTotal)} kWh</div>
                             </div>
                         </div>
                     </div>
@@ -6988,14 +6992,14 @@ async function distributeStagnantEnergy() {
                             <table class="w-full border-collapse">
                                 <thead class="sticky top-0 z-30">
                                     <tr class="bg-slate-50/95 backdrop-blur-md">
-                                        <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">日期</th>
-                                        ${showMeteringPointColumn ? `<th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">计量点</th>` : ''}
-                                        <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">时段用电 (kWh)</th>
-                                        ${hasGenerationData ? `<th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-emerald-600">上网电量 (kWh)</th>` : ''}
+                                        <th class="border-b border-slate-200 px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 pl-6">日期</th>
+                                        ${showMeteringPointColumn ? `<th class="border-b border-slate-200 px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">计量点</th>` : ''}
+                                        <th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">时段用电 (kWh)</th>
+                                        ${hasGenerationData ? `<th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-emerald-600">上网电量 (kWh)</th>` : ''}
                                         <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">占全天</th>
                                         <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">占全年</th>
-                                        <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">平均每小时</th>
-                                        <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">日总用电 (kWh)</th>
+                                        <th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">平均时负载</th>
+                                        <th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500 pr-6">日总用电 (kWh)</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
@@ -7024,21 +7028,16 @@ async function distributeStagnantEnergy() {
 
                     html += `
                         <tr class="group transition-colors hover:bg-slate-50/80">
-                            <td class="px-4 py-4 text-center text-xs font-bold text-slate-600 sticky left-0 z-10 bg-inherit group-hover:bg-slate-50/80">${row.date}</td>
-                            ${showMeteringPointColumn ? `<td class="px-4 py-4 text-center text-[10px] font-medium text-slate-400">${row.meteringPoint}</td>` : ''}
-                            <td class="px-4 py-4 text-center text-xs font-black text-slate-900">${formatNum(row.periodTotal)}</td>
-                            ${hasGenerationData ? `<td class="px-4 py-4 text-center text-xs font-bold text-emerald-600 bg-emerald-50/20">${row.periodGeneration > 0 ? formatNum(row.periodGeneration) : '-'}</td>` : ''}
+                            <td class="px-4 py-4 text-left text-xs font-bold text-slate-600 sticky left-0 z-10 bg-inherit group-hover:bg-slate-50/80 pl-6 border-r border-slate-100/50">${row.date}</td>
+                            ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] font-medium text-slate-400 border-r border-slate-100/50">${row.meteringPoint}</td>` : ''}
+                            <td class="px-4 py-4 text-right text-xs font-black text-slate-900 tabular-nums">${formatNum(row.periodTotal)}</td>
+                            ${hasGenerationData ? `<td class="px-4 py-4 text-right text-xs font-bold text-emerald-600 bg-emerald-50/20 tabular-nums">${row.periodGeneration > 0 ? formatNum(row.periodGeneration) : '-'}</td>` : ''}
                             <td class="px-4 py-4 text-center">
-                                <div class="inline-flex flex-col items-center">
-                                    <span class="text-xs ${getPctColor(row.dailyPercentage)}">${formatPct(row.dailyPercentage)}</span>
-                                    <div class="mt-1 h-1 w-12 overflow-hidden rounded-full bg-slate-100">
-                                        <div class="h-full ${getBarColor(row.dailyPercentage)} transition-all duration-500" style="width: ${row.dailyPercentage}%"></div>
-                                    </div>
-                                </div>
+                                <span class="text-xs ${getPctColor(row.dailyPercentage)} tabular-nums">${formatPct(row.dailyPercentage)}</span>
                             </td>
-                            <td class="px-4 py-4 text-center text-[10px] ${getPctColor(yearlyPercentage)}">${formatPct(yearlyPercentage)}</td>
-                            <td class="px-4 py-4 text-center text-xs font-medium text-slate-500">${formatNum(row.hourlyAverage)}</td>
-                            <td class="px-4 py-4 text-center text-xs font-bold text-slate-700 bg-slate-50/30">${formatNum(row.dailyTotal)}</td>
+                            <td class="px-4 py-4 text-center text-[10px] ${getPctColor(yearlyPercentage)} tabular-nums">${formatPct(yearlyPercentage)}</td>
+                            <td class="px-4 py-4 text-right text-xs font-medium text-slate-500 tabular-nums">${formatNum(row.hourlyAverage)}</td>
+                            <td class="px-4 py-4 text-right text-xs font-bold text-slate-700 bg-slate-50/30 pr-6 tabular-nums">${formatNum(row.dailyTotal)}</td>
                         </tr>
                     `;
                 });
@@ -7062,29 +7061,29 @@ async function distributeStagnantEnergy() {
 
                 // 添加汇总行
                 html += `
-                    <tr class="bg-slate-100 font-bold sticky bottom-[38px] z-40 backdrop-blur-md border-t-2 border-slate-200">
-                        <td class="px-4 py-3 text-center text-xs text-slate-900 sticky left-0 z-50 bg-inherit">累计汇总</td>
-                        ${showMeteringPointColumn ? `<td class="px-4 py-3 text-center text-[10px] text-slate-400">-</td>` : ''}
-                        <td class="px-4 py-3 text-center text-xs text-slate-900 font-black">${formatNum(statsSummary.totalPeriod)}</td>
-                        ${hasGenerationData ? `<td class="px-4 py-3 text-center text-xs font-bold text-emerald-700 bg-emerald-100/30">${formatNum(statsSummary.totalGeneration)}</td>` : ''}
-                        <td class="px-4 py-3 text-center text-xs text-slate-900">${formatPct(overallPeriodPercentage)}</td>
-                        <td class="px-4 py-3 text-center text-[10px] text-slate-400">100.0%</td>
-                        <td class="px-4 py-3 text-center text-xs text-slate-700">-</td>
-                        <td class="px-4 py-3 text-center text-xs font-black text-slate-900 bg-slate-100/20">${formatNum(statsSummary.totalDaily)}</td>
+                    <tr class="bg-indigo-50 font-bold sticky bottom-[48px] z-40 border-t-2 border-indigo-200 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)]">
+                        <td class="px-4 py-4 text-left text-xs text-indigo-900 font-black sticky left-0 z-50 bg-inherit pl-6 border-r border-indigo-100/50">累计汇总</td>
+                        ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] text-slate-400 font-bold border-r border-indigo-100/50">-</td>` : ''}
+                        <td class="px-4 py-4 text-right text-sm text-indigo-700 font-black tabular-nums">${formatNum(statsSummary.totalPeriod)}</td>
+                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-700 bg-emerald-100/20 tabular-nums">${formatNum(statsSummary.totalGeneration)}</td>` : ''}
+                        <td class="px-4 py-4 text-center text-xs text-indigo-900 font-black tabular-nums">${formatPct(overallPeriodPercentage)}</td>
+                        <td class="px-4 py-4 text-center text-[10px] text-slate-400 font-black tabular-nums">100.0%</td>
+                        <td class="px-4 py-4 text-right text-xs text-slate-700 font-bold tabular-nums">-</td>
+                        <td class="px-4 py-4 text-right text-sm font-black text-indigo-900 bg-indigo-100/20 pr-6 tabular-nums">${formatNum(statsSummary.totalDaily)}</td>
                     </tr>
                 `;
 
                 // 添加平均行
                 html += `
-                    <tr class="bg-slate-50/95 font-bold sticky bottom-0 z-40 backdrop-blur-md border-t border-slate-200 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
-                        <td class="px-4 py-3 text-center text-xs text-slate-700 sticky left-0 z-50 bg-inherit">平均数值</td>
-                        ${showMeteringPointColumn ? `<td class="px-4 py-3 text-center text-[10px] text-slate-400">-</td>` : ''}
-                        <td class="px-4 py-3 text-center text-xs text-slate-900 font-black">${formatNum(statsAvg.periodTotal)}</td>
-                        ${hasGenerationData ? `<td class="px-4 py-3 text-center text-xs font-bold text-emerald-600 bg-emerald-50/10">${formatNum(statsAvg.periodGeneration)}</td>` : ''}
-                        <td class="px-4 py-3 text-center text-xs text-slate-700">${formatPct(statsAvg.dailyPercentage)}</td>
-                        <td class="px-4 py-3 text-center text-[10px] text-slate-400">${formatPct(statsAvg.yearlyPercentage)}</td>
-                        <td class="px-4 py-3 text-center text-xs text-slate-600">${formatNum(statsAvg.hourlyAverage)}</td>
-                        <td class="px-4 py-3 text-center text-xs font-black text-slate-700 bg-slate-100/20">${formatNum(statsAvg.dailyTotal)}</td>
+                    <tr class="bg-white font-bold sticky bottom-0 z-40 border-t border-slate-200 shadow-[0_-2px_15px_rgba(0,0,0,0.05)]">
+                        <td class="px-4 py-4 text-left text-xs text-slate-600 font-black sticky left-0 z-50 bg-inherit pl-6 border-r border-slate-100/50">平均数值</td>
+                        ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] text-slate-400 font-bold border-r border-slate-100/50">-</td>` : ''}
+                        <td class="px-4 py-4 text-right text-sm text-indigo-600 font-black tabular-nums">${formatNum(statsAvg.periodTotal)}</td>
+                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-600 bg-emerald-50/10 tabular-nums">${formatNum(statsAvg.periodGeneration)}</td>` : ''}
+                        <td class="px-4 py-4 text-center text-xs text-slate-700 font-black tabular-nums">${formatPct(statsAvg.dailyPercentage)}</td>
+                        <td class="px-4 py-4 text-center text-[10px] text-slate-400 font-black tabular-nums">${formatPct(statsAvg.yearlyPercentage)}</td>
+                        <td class="px-4 py-4 text-right text-xs text-slate-600 font-black tabular-nums">${formatNum(statsAvg.hourlyAverage)}</td>
+                        <td class="px-4 py-4 text-right text-sm font-black text-slate-700 bg-slate-50/50 pr-6 tabular-nums">${formatNum(statsAvg.dailyTotal)}</td>
                     </tr>
                 `;
 
@@ -11686,6 +11685,9 @@ async function distributeStagnantEnergy() {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    maxBarThickness: 40, // 缩小柱子最大宽度，更显精致
+                    categoryPercentage: 0.8, // 控制类目在可用空间中占据的比例
+                    barPercentage: 0.9, // 控制柱子在类目空间中占据的比例
                     layout: {
                         padding: {
                             top: 20,
@@ -12010,6 +12012,235 @@ async function distributeStagnantEnergy() {
 
 
 
+        /**
+         * 渲染数据模板列表
+         */
+        function renderTemplates() {
+            const mainTemplateList = document.getElementById('mainTemplateList');
+            const sidebarTemplateList = document.getElementById('templateList');
+            if (typeof DATA_TEMPLATES === 'undefined') return;
+
+            // 渲染主导入区卡片
+            if (mainTemplateList) {
+                mainTemplateList.innerHTML = '';
+                DATA_TEMPLATES.forEach(template => {
+                    const card = document.createElement('div');
+                    
+                    // 根据模板类型定义颜色
+                    let colorClass = 'indigo';
+                    let iconClass = 'fa-table';
+                    
+                    if (template.id.includes('96')) {
+                        colorClass = 'indigo';
+                        iconClass = 'fa-table-cells';
+                    } else if (template.id.includes('24')) {
+                        colorClass = 'blue';
+                        iconClass = 'fa-clock';
+                    } else if (template.id.includes('long')) {
+                        colorClass = 'rose';
+                        iconClass = 'fa-list-ul';
+                    } else if (template.id.includes('multi')) {
+                        colorClass = 'violet';
+                        iconClass = 'fa-layer-group';
+                    }
+
+                    // 动态构建样式类
+                    card.className = `relative flex flex-col p-4 rounded-2xl border-2 border-transparent bg-${colorClass}-50/40 hover:bg-white hover:border-${colorClass}-200 hover:shadow-xl hover:shadow-${colorClass}-500/10 hover:-translate-y-1.5 active:scale-[0.98] transition-all duration-300 group cursor-pointer overflow-hidden`;
+                    card.onclick = () => applyDataTemplate(template.id);
+                    
+                    const isNew = template.id === 'multi_mp_wide';
+                    
+                    card.innerHTML = `
+                        <!-- 背景装饰 -->
+                        <div class="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-${colorClass}-100/30 group-hover:bg-${colorClass}-100/50 transition-colors duration-500"></div>
+                        
+                        ${isNew ? `<span class="absolute top-0 right-0 px-3 py-1 bg-${colorClass}-600 text-white text-[10px] font-black rounded-bl-xl shadow-sm z-10">推荐</span>` : ''}
+                        
+                        <div class="flex items-start gap-4 relative z-10">
+                            <!-- 图标区域 -->
+                            <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white shadow-sm border border-${colorClass}-100 text-${colorClass}-500 group-hover:bg-${colorClass}-500 group-hover:text-white group-hover:scale-110 transition-all duration-300">
+                                <i class="fa ${iconClass} text-xl"></i>
+                            </div>
+                            
+                            <!-- 文字区域 -->
+                            <div class="flex-1 min-w-0 pt-0.5">
+                                <h4 class="text-[13px] font-black text-slate-700 group-hover:text-${colorClass}-700 truncate transition-colors mb-1">${template.name}</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-white/80 border border-${colorClass}-100 text-[10px] font-bold text-${colorClass}-600 shadow-sm">
+                                        ${template.id.includes('96') ? '15min/点' : (template.id.includes('24') ? '1h/点' : '流水结构')}
+                                    </span>
+                                    <span class="inline-flex items-center text-[10px] font-bold text-slate-400 group-hover:text-${colorClass}-400 transition-colors">
+                                        <i class="fa fa-wand-magic-sparkles mr-1 opacity-70"></i>
+                                        自动识别
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- 箭头 -->
+                            <div class="self-center text-${colorClass}-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:scale-110 transition-all duration-300">
+                                <i class="fa fa-arrow-right text-xs"></i>
+                            </div>
+                        </div>
+                    `;
+                    mainTemplateList.appendChild(card);
+                });
+            }
+
+            // 渲染边栏精简版模板
+            if (sidebarTemplateList) {
+                sidebarTemplateList.innerHTML = '';
+                DATA_TEMPLATES.forEach(template => {
+                    const card = document.createElement('div');
+                    
+                    let colorClass = 'indigo';
+                    let iconClass = 'fa-table';
+                    if (template.id.includes('96')) {
+                        colorClass = 'indigo';
+                        iconClass = 'fa-table-cells';
+                    } else if (template.id.includes('24')) {
+                        colorClass = 'blue';
+                        iconClass = 'fa-clock';
+                    } else if (template.id.includes('long')) {
+                        colorClass = 'rose';
+                        iconClass = 'fa-list-ul';
+                    } else if (template.id.includes('multi')) {
+                        colorClass = 'violet';
+                        iconClass = 'fa-layer-group';
+                    }
+
+                    card.className = `group flex items-center gap-3 p-2.5 rounded-xl border border-transparent bg-${colorClass}-50/50 hover:bg-white hover:border-${colorClass}-200 hover:shadow-sm transition-all cursor-pointer`;
+                    card.onclick = () => applyDataTemplate(template.id);
+                    
+                    card.innerHTML = `
+                        <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm border border-${colorClass}-100 text-${colorClass}-500 group-hover:bg-${colorClass}-500 group-hover:text-white transition-all">
+                            <i class="fa ${iconClass} text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-[11px] font-bold text-slate-700 group-hover:text-${colorClass}-700 truncate transition-colors">${template.name}</h4>
+                            <p class="text-[9px] text-slate-400 font-medium">${template.id.includes('96') ? '15min/点' : (template.id.includes('24') ? '1h/点' : '流水结构')}</p>
+                        </div>
+                        <div class="text-${colorClass}-300 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all">
+                            <i class="fa fa-chevron-right text-[9px]"></i>
+                        </div>
+                    `;
+                    sidebarTemplateList.appendChild(card);
+                });
+            }
+        }
+
+        /**
+         * 应用选定的数据模板
+         * @param {string} templateId 模板ID
+         */
+        async function applyDataTemplate(templateId) {
+            const template = DATA_TEMPLATES.find(t => t.id === templateId);
+            if (!template) return;
+
+            showGlobalLoading('正在加载示例模板...');
+
+            try {
+                // 1. 生成模拟数据
+                const mockResult = template.generateMockData();
+                const fileName = `示例_${template.name}.xlsx`;
+                const mockFile = {
+                    name: fileName,
+                    size: 1024 * 1024, // 模拟 1MB
+                    lastModified: Date.now()
+                };
+
+                // 2. 清空现有数据
+                appData.files = [];
+                appData.worksheets = [];
+                appData.parsedData = [];
+                appData.processedData = [];
+                elements.importedFiles.innerHTML = '';
+                
+                // 3. 注入模拟数据
+                appData.files.push(mockFile);
+                const worksheet = {
+                    name: mockResult.sheetName,
+                    data: [mockResult.headers, ...mockResult.data],
+                    file: mockFile
+                };
+                appData.worksheets.push(worksheet);
+
+                // 4. 更新配置
+                appData.config = { ...appData.config, ...template.config };
+
+                // 5. 更新 UI
+                addFileToUI(mockFile);
+                populateColumnSelects(mockResult.headers, worksheet.data);
+                
+                // 自动同步配置到下拉框
+                setTimeout(() => {
+                    const headers = mockResult.headers;
+                    const findIndex = (val) => {
+                        if (val === undefined || val === null || val === '') return '';
+                        // 如果已经是数字索引
+                        if (!isNaN(val) && val !== '') return val;
+                        // 如果是表头名称，查找索引
+                        const idx = headers.findIndex(h => h === val);
+                        return idx !== -1 ? idx.toString() : '';
+                    };
+
+                    if (appData.config.dataStructure) {
+                        const dsRadio = document.querySelector(`input[name="dataStructure"][value="${appData.config.dataStructure}"]`);
+                        if (dsRadio) {
+                            dsRadio.checked = true;
+                            dsRadio.dispatchEvent(new Event('change'));
+                        }
+                    }
+
+                    // 转换为索引并设置值
+                    if (elements.dateColumnSelect) {
+                        const val = findIndex(appData.config.dateColumn);
+                        elements.dateColumnSelect.value = val;
+                        appData.config.dateColumn = val; // 同步回 config
+                    }
+                    if (elements.dataStartColumnSelect) {
+                        const val = findIndex(appData.config.dataStartColumn);
+                        elements.dataStartColumnSelect.value = val;
+                        appData.config.dataStartColumn = val;
+                    }
+                    if (elements.dataEndColumnSelect) {
+                        const val = findIndex(appData.config.dataEndColumn);
+                        elements.dataEndColumnSelect.value = val;
+                        appData.config.dataEndColumn = val;
+                    }
+                    if (elements.meteringPointColumnSelect) {
+                        const val = findIndex(appData.config.meteringPointColumn);
+                        elements.meteringPointColumnSelect.value = val;
+                        appData.config.meteringPointColumn = val;
+                    }
+                    if (elements.multiplierColumnSelect) {
+                        const val = findIndex(appData.config.multiplierColumn);
+                        elements.multiplierColumnSelect.value = val;
+                        appData.config.multiplierColumn = val;
+                    }
+                    
+                    // 触发配置验证和预览更新
+                    updateDataStats();
+                    updateDataPreview();
+                    buildRawDataPreview();
+                    if (typeof checkConfigValidity === 'function') checkConfigValidity();
+                    
+                    // 自动跳转到配置区
+                    const configSection = document.getElementById('configSection');
+                    if (configSection) {
+                        configSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    
+                    hideGlobalLoading();
+                    showNotification('成功', `已成功加载 "${template.name}" 模板及模拟数据`, 'success');
+                }, 300);
+
+            } catch (error) {
+                console.error('应用模板失败:', error);
+                hideGlobalLoading();
+                showNotification('错误', '加载模板失败，请重试', 'error');
+            }
+        }
+
         // 初始化应用
         function initApp() {
             // 强制滚动到顶部，修复初始加载时位置偏移问题
@@ -12017,6 +12248,9 @@ async function distributeStagnantEnergy() {
             
             initEventListeners();
             setImportStatus('idle');
+            
+            // 渲染数据模板
+            renderTemplates();
             
             // 初始化导出按钮状态为禁用
 

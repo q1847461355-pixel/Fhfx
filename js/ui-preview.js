@@ -201,10 +201,21 @@
                             // 预先计算筛选数据，避免多次计算
                             const filteredData = getFilteredData();
                             
-                            if (typeof updateChart === 'function') updateChart(filteredData);
-                            if (typeof updateDailyTotalBarChart === 'function') {
-                                updateDailyTotalBarChart(filteredData);
+                            try {
+                                if (typeof updateChart === 'function') updateChart(filteredData);
+                                if (typeof updateDailyTotalBarChart === 'function') {
+                                    updateDailyTotalBarChart(filteredData);
+                                }
+                            } catch (err) {
+                                console.error('图表更新失败:', err);
+                            } finally {
+                                // 兜底：确保加载动画被隐藏
+                                const chartLoading = document.getElementById('chartLoading');
+                                const barChartLoading = document.getElementById('barChartLoading');
+                                if (chartLoading) chartLoading.classList.add('hidden');
+                                if (barChartLoading) barChartLoading.classList.add('hidden');
                             }
+                            
                             const barChartContainer = document.getElementById('dailyTotalBarChartContainer');
                             if (barChartContainer) barChartContainer.style.display = 'block';
 
