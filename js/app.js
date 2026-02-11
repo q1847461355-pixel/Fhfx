@@ -1818,14 +1818,20 @@
             // 手动触发一次 UI 更新和数据处理
             setTimeout(() => {
                 // 更新下拉框选项
-                updateColumnSelects(mockRows);
+                populateColumnSelects(headers, mockRows);
                 
-                // 设置下拉框初始值
-                elements.dateColumnSelect.value = '日期';
-                elements.dataStartColumnSelect.value = '0:00';
-                elements.dataEndColumnSelect.value = '23:00';
-                elements.meteringPointColumnSelect.value = '计量点编号';
-                elements.timeIntervalSelect.value = '60';
+                // 设置下拉框初始值（根据索引，因为 populateColumnSelects 使用的是索引作为 value）
+                elements.dateColumnSelect.value = "0";
+                elements.dataStartColumnSelect.value = "2";
+                elements.dataEndColumnSelect.value = "25";
+                elements.meteringPointColumnSelect.value = "1";
+                elements.timeIntervalSelect.value = "60";
+
+                // 同时更新 appData.config 中的索引值
+                appData.config.dateColumn = "0";
+                appData.config.dataStartColumn = "2";
+                appData.config.dataEndColumn = "25";
+                appData.config.meteringPointColumn = "1";
                 
                 // 处理数据
                 reprocessDataWithConfig();
