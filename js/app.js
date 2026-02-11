@@ -3359,53 +3359,102 @@
              const tailLimit = 25;
              const showEllipsis = totalRows > headLimit + tailLimit;
 
-             // 渲染单行数据的辅助函数
-             const renderRow = (row, index, rowIndex) => {
-                 const rowBgClass = rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
-                 let rowHtml = '';
+            // 渲染单行数据的辅助函数
+            const renderRow = (row, index, rowIndex, isSummary = false) => {
+                const isCumulative = isSummary && row.date === '累计汇总';
+                const rowBgClass = isSummary 
+                    ? (isCumulative ? 'bg-slate-100/95 font-bold' : 'bg-slate-50/95 font-bold') 
+                    : (rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50');
+                
+                const borderClass = isSummary ? 'border-t-2 border-slate-200' : 'border-b border-slate-100';
+                const stickyClass = isSummary ? 'sticky bottom-0 z-40 backdrop-blur-md' : '';
+                const stickyOffset = isSummary && row.date === '平均数值' ? 'bottom-0' : (isSummary ? 'bottom-[37px]' : '');
+                let rowHtml = '';
 
-                 // 日期列
-                 rowHtml += `<div class="${rowBgClass} border-b border-slate-100 px-4 py-3.5 text-left text-xs font-bold text-slate-700 sticky left-0 z-10" data-date="${row.date}">${row.date}</div>`;
+                // 日期列 (冻结首列)
+                rowHtml += `<div class="${rowBgClass} ${borderClass} px-4 py-3.5 text-left text-xs font-bold text-slate-700 sticky left-0 z-30 ${stickyClass} ${stickyOffset}" data-date="${row.date || ''}">${row.date}</div>`;
 
-                 // 24小时数据列
-                 let dayTotal = 0;
-                 for (let hour = 0; hour < 24; hour++) {
-                     const value = row.hourlyData[hour];
-                     const displayValue = (value !== null && value !== undefined) ? value.toFixed(2) : '-';
-                     const textClass = (value !== null && value !== undefined) ? 'text-slate-700' : 'text-slate-300';
-                     
-                    rowHtml += `<div class="${rowBgClass} border-b border-slate-100 px-2 py-3.5 text-center text-xs font-medium ${textClass}">${displayValue}</div>`;
-                     if (value !== null && value !== undefined) {
-                         dayTotal += value;
-                     }
-                 }
+                // 24小时数据列
+                let dayTotal = 0;
+                for (let hour = 0; hour < 24; hour++) {
+                    const value = row.hourlyData[hour];
+                    const displayValue = (value !== null && value !== undefined) ? value.toFixed(2) : '-';
+                    const textClass = isSummary ? 'text-slate-900' : ((value !== null && value !== undefined) ? 'text-slate-700' : 'text-slate-300');
+                    
+                    rowHtml += `<div class="${rowBgClass} ${borderClass} px-2 py-3.5 text-center text-xs font-medium ${textClass} ${stickyClass} ${stickyOffset}">${displayValue}</div>`;
+                    if (value !== null && value !== undefined) {
+                        dayTotal += value;
+                    }
+                }
 
-                 // 日总电能列
-                rowHtml += `<div class="${rowBgClass} border-b border-slate-100 px-3 py-3.5 text-center text-xs font-bold text-indigo-600">${dayTotal.toFixed(2)}</div>`;
-                 return rowHtml;
-             };
+                // 日总电能列
+                const totalValue = row.total !== undefined ? row.total : dayTotal;
+                const totalTextClass = isSummary ? 'text-indigo-700' : 'text-indigo-600';
+                rowHtml += `<div class="${rowBgClass} ${borderClass} px-3 py-3.5 text-center text-xs font-bold ${totalTextClass} ${stickyClass} ${stickyOffset}">${totalValue.toFixed(2)}</div>`;
+                return rowHtml;
+            };
 
-             if (showEllipsis) {
-                 // 显示前25行
-                 for (let i = 0; i < headLimit; i++) {
-                     tableHtml += renderRow(appData.processedData[i], i, i);
-                 }
+            // 计算汇总和平均
+            const calculateSummaryRows = () => {
+                const hourlySums = new Array(24).fill(0);
+                const hourlyCounts = new Array(24).fill(0);
+                let grandTotal = 0;
+
+                appData.processedData.forEach(row => {
+                    for (let hour = 0; hour < 24; hour++) {
+                        const val = row.hourlyData[hour];
+                        if (val !== null && val !== undefined) {
+                            hourlySums[hour] += val;
+                            hourlyCounts[hour]++;
+                            grandTotal += val;
+                        }
+                    }
+                });
+
+                const hourlyAverages = hourlySums.map((sum, i) => hourlyCounts[i] > 0 ? sum / hourlyCounts[i] : null);
+                const avgTotal = grandTotal / appData.processedData.length;
+
+                return {
+                    sumRow: {
+                        date: '累计汇总',
+                        hourlyData: hourlySums,
+                        total: grandTotal
+                    },
+                    avgRow: {
+                        date: '平均数值',
+                        hourlyData: hourlyAverages,
+                        total: avgTotal
+                    }
+                };
+            };
+
+            const { sumRow, avgRow } = calculateSummaryRows();
+
+            if (showEllipsis) {
+                // 显示前25行
+                for (let i = 0; i < headLimit; i++) {
+                    tableHtml += renderRow(appData.processedData[i], i, i);
+                }
 
                 // 显示省略行
                 tableHtml += `<div class="bg-slate-100 border-b border-slate-200 px-4 py-3 text-left text-xs font-extrabold text-slate-500 sticky left-0 z-10" style="grid-column: 1 / -1;">... 省略 ${totalRows - headLimit - tailLimit} 行数据 ...</div>`;
 
-                 // 显示后25行
-                 for (let i = totalRows - tailLimit; i < totalRows; i++) {
-                     tableHtml += renderRow(appData.processedData[i], i, i);
-                 }
-             } else {
-                 // 数据少于50行，全部显示
-                 for (let i = 0; i < totalRows; i++) {
-                     tableHtml += renderRow(appData.processedData[i], i, i);
-                 }
-             }
+                // 显示后25行
+                for (let i = totalRows - tailLimit; i < totalRows; i++) {
+                    tableHtml += renderRow(appData.processedData[i], i, i);
+                }
+            } else {
+                // 数据少于50行，全部显示
+                for (let i = 0; i < totalRows; i++) {
+                    tableHtml += renderRow(appData.processedData[i], i, i);
+                }
+            }
 
-             tableHtml += `</div>`;
+            // 添加汇总和平均行
+            tableHtml += renderRow(sumRow, -1, totalRows, true);
+            tableHtml += renderRow(avgRow, -2, totalRows + 1, true);
+
+            tableHtml += `</div>`;
 
              // 数据提示
              if (totalRows > headLimit + tailLimit) {
@@ -6704,6 +6753,7 @@ async function distributeStagnantEnergy() {
                                     <span class="text-xl font-black text-slate-900">${formatNum(totalPeriodAll)}</span>
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">kWh</span>
                                 </div>
+                                <div class="mt-1 text-[9px] text-slate-400 font-medium">选定时段内的累计用电总量</div>
                             </div>
                             <div class="absolute -right-2 -bottom-2 text-blue-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
                                 <i class="fa fa-bolt"></i>
@@ -6728,7 +6778,7 @@ async function distributeStagnantEnergy() {
                                     <span class="text-xl font-black text-emerald-700">${formatNum(totalPeriodGenerationAll)}</span>
                                     <span class="text-[10px] font-bold text-emerald-500 uppercase">kWh</span>
                                 </div>
-                                <div class="mt-1 text-[9px] text-emerald-600/60 font-medium">筛选负值得到</div>
+                                <div class="mt-1 text-[9px] text-emerald-600/60 font-medium">选定时段内的累计上网电量</div>
                             </div>
                             <div class="absolute -right-2 -bottom-2 text-emerald-200/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
                                 <i class="fa fa-solar-panel"></i>
@@ -6745,23 +6795,36 @@ async function distributeStagnantEnergy() {
                                     <span class="text-xl font-black text-slate-900">${formatNum(totalDailyAll)}</span>
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">kWh</span>
                                 </div>
+                                <div class="mt-1 text-[9px] text-slate-400 font-medium">所选日期范围内的全天总用电</div>
                             </div>
                             <div class="absolute -right-2 -bottom-2 text-indigo-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
                                 <i class="fa fa-calendar-alt"></i>
                             </div>
                         </div>
+                    `;
 
-                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-violet-200/60">
+                    // 时段占比卡片 - 语义化颜色
+                    const getPctCardStyles = (pct) => {
+                        if (pct >= 80) return { border: 'hover:border-rose-200', dot: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]', icon: 'text-rose-50/40', text: 'text-rose-600' };
+                        if (pct >= 50) return { border: 'hover:border-orange-200', dot: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]', icon: 'text-orange-50/40', text: 'text-orange-600' };
+                        if (pct >= 20) return { border: 'hover:border-amber-200', dot: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]', icon: 'text-amber-50/40', text: 'text-amber-600' };
+                        return { border: 'hover:border-emerald-200', dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]', icon: 'text-emerald-50/40', text: 'text-emerald-600' };
+                    };
+                    const pctStyles = getPctCardStyles(overallPeriodPercentage);
+
+                    html += `
+                        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md ${pctStyles.border}">
                             <div class="relative z-10">
                                 <div class="flex items-center gap-2 mb-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)]"></span>
+                                    <span class="h-1.5 w-1.5 rounded-full ${pctStyles.dot}"></span>
                                     <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">时段占比</div>
                                 </div>
                                 <div class="mt-2">
-                                    <span class="text-xl font-black text-slate-900">${formatPct(overallPeriodPercentage)}</span>
+                                    <span class="text-xl font-black ${pctStyles.text}">${formatPct(overallPeriodPercentage)}</span>
                                 </div>
+                                <div class="mt-1 text-[9px] text-slate-400 font-medium">时段用电占全天总用电的比例</div>
                             </div>
-                            <div class="absolute -right-2 -bottom-2 text-violet-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
+                            <div class="absolute -right-2 -bottom-2 ${pctStyles.icon} text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
                                 <i class="fa fa-percentage"></i>
                             </div>
                         </div>
@@ -6776,6 +6839,7 @@ async function distributeStagnantEnergy() {
                                     <span class="text-xl font-black text-slate-900">${formatNum(avgHourlyInPeriod)}</span>
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">kWh</span>
                                 </div>
+                                <div class="mt-1 text-[9px] text-slate-400 font-medium">选定时段内平均每小时的负荷</div>
                             </div>
                             <div class="absolute -right-2 -bottom-2 text-cyan-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
                                 <i class="fa fa-clock"></i>
@@ -6790,6 +6854,7 @@ async function distributeStagnantEnergy() {
                                 </div>
                                 <div class="mt-2 truncate text-sm font-black text-slate-900" title="${maxPeriodKey}">${maxPeriodKey}</div>
                                 <div class="text-[10px] font-bold text-rose-500">${formatNum(maxPeriodTotal)} kWh</div>
+                                <div class="mt-1 text-[9px] text-slate-400 font-medium">时段内用电量最高的一天</div>
                             </div>
                             <div class="absolute -right-2 -bottom-2 text-rose-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
                                 <i class="fa fa-arrow-trend-up"></i>
@@ -6804,6 +6869,7 @@ async function distributeStagnantEnergy() {
                                 </div>
                                 <div class="mt-2 truncate text-sm font-black text-slate-900" title="${minPeriodKey}">${minPeriodKey}</div>
                                 <div class="text-[10px] font-bold text-amber-500">${formatNum(minPeriodTotal)} kWh</div>
+                                <div class="mt-1 text-[9px] text-slate-400 font-medium">时段内用电量最低的一天</div>
                             </div>
                             <div class="absolute -right-2 -bottom-2 text-amber-50/40 text-4xl transform -rotate-12 transition-transform group-hover:scale-110 group-hover:rotate-0">
                                 <i class="fa fa-arrow-trend-down"></i>
@@ -6836,17 +6902,24 @@ async function distributeStagnantEnergy() {
                 perRowStats.forEach((row, index) => {
                     const yearlyPercentage = totalYearlyAll > 0 ? (row.periodTotal / totalYearlyAll) * 100 : 0;
                     
-                    // 根据比例大小决定颜色深度
+                    // 根据比例大小决定颜色：小的时候绿色，大的时候红色
                     const getPctColor = (pct) => {
-                        if (pct >= 80) return 'text-indigo-700 font-black';
-                        if (pct >= 50) return 'text-indigo-600 font-bold';
-                        if (pct >= 30) return 'text-indigo-500 font-bold';
-                        return 'text-indigo-400 font-medium';
+                        if (pct >= 80) return 'text-rose-600 font-black';
+                        if (pct >= 50) return 'text-orange-500 font-bold';
+                        if (pct >= 20) return 'text-amber-500 font-bold';
+                        return 'text-emerald-500 font-bold';
+                    };
+
+                    const getBarColor = (pct) => {
+                        if (pct >= 80) return 'bg-rose-500';
+                        if (pct >= 50) return 'bg-orange-400';
+                        if (pct >= 20) return 'bg-amber-400';
+                        return 'bg-emerald-400';
                     };
 
                     html += `
                         <tr class="group transition-colors hover:bg-slate-50/80">
-                            <td class="px-4 py-4 text-center text-xs font-bold text-slate-600">${row.date}</td>
+                            <td class="px-4 py-4 text-center text-xs font-bold text-slate-600 sticky left-0 z-10 bg-inherit group-hover:bg-slate-50/80">${row.date}</td>
                             ${showMeteringPointColumn ? `<td class="px-4 py-4 text-center text-[10px] font-medium text-slate-400">${row.meteringPoint}</td>` : ''}
                             <td class="px-4 py-4 text-center text-xs font-black text-slate-900">${formatNum(row.periodTotal)}</td>
                             ${hasGenerationData ? `<td class="px-4 py-4 text-center text-xs font-bold text-emerald-600 bg-emerald-50/20">${row.periodGeneration > 0 ? formatNum(row.periodGeneration) : '-'}</td>` : ''}
@@ -6854,16 +6927,61 @@ async function distributeStagnantEnergy() {
                                 <div class="inline-flex flex-col items-center">
                                     <span class="text-xs ${getPctColor(row.dailyPercentage)}">${formatPct(row.dailyPercentage)}</span>
                                     <div class="mt-1 h-1 w-12 overflow-hidden rounded-full bg-slate-100">
-                                        <div class="h-full bg-indigo-500 transition-all duration-500" style="width: ${row.dailyPercentage}%"></div>
+                                        <div class="h-full ${getBarColor(row.dailyPercentage)} transition-all duration-500" style="width: ${row.dailyPercentage}%"></div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-4 py-4 text-center text-[10px] font-bold text-slate-400">${formatPct(yearlyPercentage)}</td>
+                            <td class="px-4 py-4 text-center text-[10px] ${getPctColor(yearlyPercentage)}">${formatPct(yearlyPercentage)}</td>
                             <td class="px-4 py-4 text-center text-xs font-medium text-slate-500">${formatNum(row.hourlyAverage)}</td>
                             <td class="px-4 py-4 text-center text-xs font-bold text-slate-700 bg-slate-50/30">${formatNum(row.dailyTotal)}</td>
                         </tr>
                     `;
                 });
+
+                // 计算统计表的汇总和平均
+                const statsSummary = perRowStats.reduce((acc, curr) => {
+                    acc.totalPeriod += curr.periodTotal;
+                    acc.totalGeneration += curr.periodGeneration;
+                    acc.totalDaily += curr.dailyTotal;
+                    return acc;
+                }, { totalPeriod: 0, totalGeneration: 0, totalDaily: 0 });
+
+                const statsAvg = {
+                    periodTotal: perRowStats.length > 0 ? statsSummary.totalPeriod / perRowStats.length : 0,
+                    periodGeneration: perRowStats.length > 0 ? statsSummary.totalGeneration / perRowStats.length : 0,
+                    dailyTotal: perRowStats.length > 0 ? statsSummary.totalDaily / perRowStats.length : 0,
+                    dailyPercentage: totalDailyAll > 0 ? (statsSummary.totalPeriod / totalDailyAll) * 100 : 0,
+                    yearlyPercentage: totalYearlyAll > 0 ? (statsSummary.totalPeriod / totalYearlyAll) * 100 : 0,
+                    hourlyAverage: avgHourlyInPeriod
+                };
+
+                // 添加汇总行
+                html += `
+                    <tr class="bg-slate-100 font-bold sticky bottom-[38px] z-40 backdrop-blur-md border-t-2 border-slate-200">
+                        <td class="px-4 py-3 text-center text-xs text-slate-900 sticky left-0 z-50 bg-inherit">累计汇总</td>
+                        ${showMeteringPointColumn ? `<td class="px-4 py-3 text-center text-[10px] text-slate-400">-</td>` : ''}
+                        <td class="px-4 py-3 text-center text-xs text-slate-900 font-black">${formatNum(statsSummary.totalPeriod)}</td>
+                        ${hasGenerationData ? `<td class="px-4 py-3 text-center text-xs font-bold text-emerald-700 bg-emerald-100/30">${formatNum(statsSummary.totalGeneration)}</td>` : ''}
+                        <td class="px-4 py-3 text-center text-xs text-slate-900">${formatPct(overallPeriodPercentage)}</td>
+                        <td class="px-4 py-3 text-center text-[10px] text-slate-400">100.0%</td>
+                        <td class="px-4 py-3 text-center text-xs text-slate-700">-</td>
+                        <td class="px-4 py-3 text-center text-xs font-black text-slate-900 bg-slate-100/20">${formatNum(statsSummary.totalDaily)}</td>
+                    </tr>
+                `;
+
+                // 添加平均行
+                html += `
+                    <tr class="bg-slate-50/95 font-bold sticky bottom-0 z-40 backdrop-blur-md border-t border-slate-200 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                        <td class="px-4 py-3 text-center text-xs text-slate-700 sticky left-0 z-50 bg-inherit">平均数值</td>
+                        ${showMeteringPointColumn ? `<td class="px-4 py-3 text-center text-[10px] text-slate-400">-</td>` : ''}
+                        <td class="px-4 py-3 text-center text-xs text-slate-900 font-black">${formatNum(statsAvg.periodTotal)}</td>
+                        ${hasGenerationData ? `<td class="px-4 py-3 text-center text-xs font-bold text-emerald-600 bg-emerald-50/10">${formatNum(statsAvg.periodGeneration)}</td>` : ''}
+                        <td class="px-4 py-3 text-center text-xs text-slate-700">${formatPct(statsAvg.dailyPercentage)}</td>
+                        <td class="px-4 py-3 text-center text-[10px] text-slate-400">${formatPct(statsAvg.yearlyPercentage)}</td>
+                        <td class="px-4 py-3 text-center text-xs text-slate-600">${formatNum(statsAvg.hourlyAverage)}</td>
+                        <td class="px-4 py-3 text-center text-xs font-black text-slate-700 bg-slate-100/20">${formatNum(statsAvg.dailyTotal)}</td>
+                    </tr>
+                `;
 
                 html += `
                                 </tbody>
