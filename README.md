@@ -19,8 +19,8 @@
 
 1. 克隆仓库
 ```bash
-git clone [仓库地址]
-cd 负荷曲线生成工具
+git clone https://github.com/q1847461355-pixel/Fhfx.git
+cd Fhfx
 ```
 
 2. 直接打开 `负荷处理数据.html` 文件即可使用
