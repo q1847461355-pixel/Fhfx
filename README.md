@@ -1,4 +1,4 @@
-##  致谢
+## 🙏 致谢
 
 - [Tailwind CSS](https://tailwindcss.com/) - 现代化CSS框架
 - [Chart.js](https://www.chartjs.org/) - 专业图表库
