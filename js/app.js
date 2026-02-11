@@ -241,7 +241,8 @@
             importSection: document.getElementById('importSection'),
             configSection: document.getElementById('configSection'),
             visualizationSection: document.getElementById('visualizationSection'),
-            exportSection: document.getElementById('exportSection')
+            exportSection: document.getElementById('exportSection'),
+            loadExampleDataBtn: document.getElementById('loadExampleData')
         };
 
         // 初始化事件监听
@@ -258,6 +259,10 @@
                 e.stopPropagation();
                 removeAllFiles();
             });
+
+            if (elements.loadExampleDataBtn) {
+                elements.loadExampleDataBtn.addEventListener('click', loadExampleData);
+            }
 
             
             // 配置部分
@@ -1734,6 +1739,100 @@
             buildRawDataPreview();
             
             showNotification('信息', `文件 "${fileName}" 已移除`, 'info');
+        }
+
+        // 加载示例数据
+        function loadExampleData() {
+            // 如果已有数据，提示用户
+            if (appData.files.length > 0) {
+                if (!confirm('加载示例数据将清除当前已上传的所有文件，是否继续？')) {
+                    return;
+                }
+            }
+
+            // 清除当前数据
+            removeAllFiles({ silent: true, force: true });
+            
+            // 构造模拟数据（标准24小时负荷数据）
+            const fileName = '示例负荷数据.csv';
+            const headers = ['日期', '计量点编号', '0:00', '1:00', '2:00', '3:00', '4:00', '5:00', '6:00', '7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+            
+            const generateDailyLoad = (base, noise) => {
+                return Array.from({length: 24}, (_, i) => {
+                    // 模拟典型的双峰负荷曲线
+                    const hour = i;
+                    let factor = 0.5;
+                    if (hour >= 8 && hour <= 12) factor = 0.8 + Math.random() * 0.2; // 上午峰
+                    else if (hour >= 13 && hour <= 17) factor = 0.7 + Math.random() * 0.1; // 下午平
+                    else if (hour >= 18 && hour <= 21) factor = 0.9 + Math.random() * 0.1; // 晚高峰
+                    else if (hour >= 22 || hour <= 5) factor = 0.3 + Math.random() * 0.1; // 深夜谷
+                    return (base * factor + (Math.random() - 0.5) * noise).toFixed(2);
+                });
+            };
+
+            const mockRows = [headers];
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 7); // 从7天前开始
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(date.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                // 模拟两个不同的计量点
+                mockRows.push([dateStr, 'MP001', ...generateDailyLoad(1000, 50)]);
+                mockRows.push([dateStr, 'MP002', ...generateDailyLoad(1500, 80)]);
+            }
+
+            // 模拟文件对象添加到 appData
+            const fileInfo = {
+                name: fileName,
+                size: 1024,
+                type: 'text/csv',
+                status: 'success',
+                progress: 100,
+                id: 'example_' + Date.now()
+            };
+
+            appData.files.push(fileInfo);
+            appData.parsedData.push({
+                fileName: fileName,
+                sheets: [{
+                    name: 'Sheet1',
+                    data: mockRows
+                }]
+            });
+
+            // 渲染 UI
+            renderFileList();
+            setImportStatus('success');
+            updateStepStatus(1, true);
+            
+            // 自动配置常用选项
+            appData.config.dateColumn = '日期';
+            appData.config.dataStartColumn = '0:00';
+            appData.config.dataEndColumn = '23:00';
+            appData.config.meteringPointColumn = '计量点编号';
+            appData.config.timeInterval = 60;
+            
+            // 手动触发一次 UI 更新和数据处理
+            setTimeout(() => {
+                // 更新下拉框选项
+                updateColumnSelects(mockRows);
+                
+                // 设置下拉框初始值
+                elements.dateColumnSelect.value = '日期';
+                elements.dataStartColumnSelect.value = '0:00';
+                elements.dataEndColumnSelect.value = '23:00';
+                elements.meteringPointColumnSelect.value = '计量点编号';
+                elements.timeIntervalSelect.value = '60';
+                
+                // 处理数据
+                reprocessDataWithConfig();
+                
+                // 提示用户
+                showNotification('成功', '示例数据已加载，包含过去7天的模拟负荷。', 'success');
+            }, 100);
         }
 
         // 重置所有文件和数据
