@@ -1,869 +1,36 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>24小时负荷曲线生成工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 使用系统默认字体 -->
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        }
-        code, pre {
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-        }
-    </style>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script>
-        // Chart.js 加载失败时的备用方案
         if (typeof Chart === 'undefined') {
             console.warn('Chart.js CDN加载失败，尝试加载本地备用...');
             document.write('<script src="js/lib/chart.umd.js"><\/script>');
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" onerror="this.onerror=null; this.src='https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'"></script>
     <script>
-        // XLSX 加载失败时的备用方案
         if (typeof XLSX === 'undefined') {
-            console.warn('XLSX CDN加载失败，尝试加载本地备用...');
-            document.write('<script src="js/lib/xlsx.full.min.js"><\/script>');
+            console.warn('XLSX CDN加载失败，尝试加载备用CDN...');
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js" onerror="this.onerror=null; this.src='js/lib/FileSaver.min.js'"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" onerror="this.onerror=null; this.src='js/lib/jszip.min.js'"></script>
     <script>
-        // JSZip 加载失败时的备用方案
         if (typeof JSZip === 'undefined') {
-            console.warn('JSZip CDN加载失败，尝试加载本地备用...');
-            document.write('<script src="js/lib/jszip.min.js"><\/script>');
+            console.warn('JSZip CDN加载失败，尝试加载备用CDN...');
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>');
         }
     </script>
     <script src="js/config.js"></script>
-    <style type="text/tailwindcss">
-        /* ==================== 现代化企业级样式系统 ==================== */
-        
-        @layer base {
-            html {
-                @apply scroll-smooth m-0 p-0;
-                scrollbar-gutter: stable;
-                overflow-y: scroll;
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-            }
-            body {
-                @apply text-slate-800 antialiased overflow-x-hidden min-h-screen m-0 p-0;
-                background-color: #f8fafc;
-                background-image: 
-                    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
-                    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-                    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 50%),
-                    radial-gradient(at 0% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
-                background-attachment: fixed;
-                font-feature-settings: "cv02", "cv05", "cv08", "cv09", "cv11";
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-            }
-        }
-
-        @layer utilities {
-            /* 性能优化工具类 */
-            .content-auto {
-                content-visibility: auto;
-                contain-intrinsic-size: 0 500px;
-            }
-            
-            .gpu-accelerated {
-                transform: translateZ(0);
-                will-change: transform;
-            }
-            
-            /* 滚动条样式优化 */
-            .scrollbar-hide {
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-            }
-            .scrollbar-hide::-webkit-scrollbar {
-                display: none;
-            }
-            
-            .scrollbar-thin {
-                scrollbar-width: thin;
-                scrollbar-color: #cbd5e1 #f1f5f9;
-            }
-            .scrollbar-thin::-webkit-scrollbar {
-                width: 6px;
-                height: 6px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-track {
-                background: #f1f5f9;
-                border-radius: 3px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-thumb {
-                background: #cbd5e1;
-                border-radius: 3px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-                background: #94a3b8;
-            }
-            
-            /* 现代化阴影系统 */
-            .shadow-soft {
-                box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
-            }
-            
-            /* 修复圆角容器在部分浏览器下的裁剪残影（直角边）问题 */
-            .overflow-hidden[class*="rounded-"] {
-                mask-image: radial-gradient(white, black);
-                -webkit-mask-image: -webkit-radial-gradient(white, black);
-                /* 强制开启 GPU 加速并优化层叠上下文渲染 */
-                backface-visibility: hidden;
-                -webkit-backface-visibility: hidden;
-                transform: translateZ(0);
-                /* 消除边缘锯齿和可能的直角背景色泄露 */
-                background-clip: padding-box;
-            }
-            
-            .shadow-medium {
-                box-shadow: 0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            }
-            
-            .shadow-strong {
-                box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 2px 10px -2px rgba(0, 0, 0, 0.05);
-            }
-            
-            /* 动画系统 */
-            @keyframes scaleIn {
-                from { opacity: 0; transform: scale(0.95) translateY(10px); }
-                to { opacity: 1; transform: scale(1) translateY(0); }
-            }
-            
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                25% { transform: translateX(-5px); }
-                75% { transform: translateX(5px); }
-            }
-            
-            .animate-scale-in {
-                animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            }
-            
-            .animate-fade-in {
-                animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            }
-            
-            .animate-shake {
-                animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-            }
-
-            /* 无障碍：尊重用户减少动画的偏好 */
-            @media (prefers-reduced-motion: reduce) {
-                .animate-scale-in,
-                .animate-fade-in,
-                .animate-shake {
-                    animation: none;
-                    opacity: 1;
-                    transform: none;
-                }
-
-                .transition-smooth,
-                .transition-fast,
-                .transition-all-300,
-                .hover-lift {
-                    transition: none;
-                }
-            }
-
-            /* 渐变背景 - 分析仪表板配色 */
-            .bg-gradient-primary {
-                background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
-            }
-            
-            .bg-gradient-secondary {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            }
-            
-            .bg-gradient-accent {
-                background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
-            }
-            
-            .bg-gradient-surface {
-                background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            }
-            
-            /* 动画系统 */
-            .transition-smooth {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            
-            .transition-fast {
-                transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            .transition-all-300 {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            
-            /* 悬停效果 */
-            .hover-lift {
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
-            }
-            .hover-lift:hover {
-                transform: translateY(-2px);
-                @apply shadow-medium;
-            }
-            
-            /* 玻璃态效果 */
-            .glass {
-                @apply bg-white/70 backdrop-blur-md border border-white/30 shadow-sm;
-            }
-            
-            .glass-frosted {
-                @apply bg-white/60 backdrop-blur-xl border border-white/40 shadow-md;
-            }
-
-            .glass-dark {
-                @apply bg-slate-900/40 backdrop-blur-xl border border-white/10;
-            }
-
-            /* 现代化按钮基础样式 */
-            .btn-base {
-                @apply px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm;
-            }
-
-            .btn-primary {
-                @apply btn-base bg-gradient-to-r from-indigo-700 to-indigo-800 text-white shadow-indigo-200 hover:shadow-indigo-300/60 hover:-translate-y-0.5;
-            }
-
-            .btn-violet {
-                @apply btn-base bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-100 hover:shadow-indigo-200/60 hover:-translate-y-0.5;
-            }
-
-            .btn-rose {
-                @apply btn-base bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-indigo-100 hover:shadow-indigo-200/60 hover:-translate-y-0.5;
-            }
-
-            .btn-summary {
-                @apply btn-base bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-100 hover:shadow-indigo-200/60 hover:-translate-y-0.5;
-            }
-
-            .btn-secondary {
-                @apply btn-base bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300/70 hover:shadow-md hover:-translate-y-0.5;
-            }
-
-            .btn-success {
-                @apply btn-base bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-indigo-100 hover:shadow-indigo-200/60 hover:-translate-y-0.5;
-            }
-
-            .btn-danger {
-                @apply btn-base bg-gradient-to-br from-slate-500 to-slate-600 text-white shadow-slate-100 hover:shadow-slate-200/60 hover:-translate-y-0.5;
-            }
-
-            /* 现代化卡片基础样式 */
-            .card-base {
-                @apply bg-white rounded-2xl border border-slate-200 shadow-sm transition-smooth;
-            }
-
-            .card-hover {
-                @apply card-base hover:shadow-medium hover:border-slate-300/60;
-            }
-        }
-
-        @layer components {
-            /* Dashboard 基础布局组件 */
-            .sidebar-link {
-                @apply flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-slate-800 hover:text-white;
-            }
-            .sidebar-link.active {
-                @apply bg-indigo-700 text-white shadow-lg shadow-indigo-900/20;
-            }
-            
-            /* Dashboard 侧边栏样式 */
-            .sidebar-container {
-                @apply fixed top-0 left-0 h-full w-64 glass-dark text-slate-300 z-50 transition-transform duration-300 ease-in-out border-r border-white/10 shadow-lg;
-            }
-            
-            /* 主内容区域样式 */
-            .main-content {
-                @apply min-h-screen transition-all duration-300 ease-in-out md:pl-64 bg-transparent;
-            }
-            
-            /* 顶部状态栏样式 - 极致悬浮方案：压缩间距，使其与下方卡片更协调 */
-            .top-bar {
-                @apply sticky top-0 z-30 px-6 pt-4 pb-2 md:px-8 lg:px-10 xl:px-14 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-0;
-                background: transparent;
-                border-bottom: none;
-                box-shadow: none;
-                top: 0 !important;
-            }
-            
-            /* 卡片组件 */
-            .dashboard-card {
-                @apply glass rounded-3xl shadow-soft transition-all duration-300 hover:shadow-medium hover:border-white/50 relative overflow-hidden;
-            }
-            
-            /* 按钮组件 */
-            .btn-dashboard-primary {
-                @apply btn-base rounded-xl glass text-slate-700 hover:bg-white/90 hover:shadow-md;
-            }
-            
-            /* 统计数值卡片 */
-            .stat-card {
-                @apply p-6 dashboard-card flex items-start justify-between;
-            }
-            
-            .stat-icon {
-                @apply w-12 h-12 rounded-xl flex items-center justify-center text-xl glass shadow-inner;
-            }
-        }
-        
-        /* ==================== 现代化图表容器样式 ==================== */
-        
-        #chartContainer, #barChartContainer {
-            position: relative;
-            @apply glass;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        #chartContainer:hover, #barChartContainer:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
-        }
-        
-        #chartContainer.loading {
-            animation: pulseSoft 2s ease-in-out infinite;
-        }
-        
-        #chartContainer canvas, #barChartContainer canvas {
-            width: 100% !important;
-            height: 100% !important;
-            border-radius: 0.5rem;
-        }
-        
-        /* 图表加载状态 */
-        .chart-loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 400px;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-radius: 1rem;
-            border: 2px dashed #cbd5e1;
-        }
-        
-        .chart-loading::before {
-            content: '';
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #1e40af;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes spinSlow {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .animate-spin-slow {
-            animation: spinSlow 2.4s linear infinite;
-        }
-
-        /* 返回顶部按钮 - 分析仪表板配色 */
-        #backToTop {
-            position: fixed;
-            right: 2rem;
-            bottom: 2rem;
-            z-index: 9999;
-            display: flex;
-            height: 3rem;
-            width: 3rem;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            color: white;
-            box-shadow: 0 4px 20px rgba(30, 64, 175, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0;
-            visibility: hidden;
-            border: none;
-            cursor: pointer;
-            transform: translateY(20px);
-        }
-        #backToTop:hover {
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-            transform: translateY(-4px) scale(1.1);
-            box-shadow: 0 8px 30px rgba(30, 64, 175, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
-        }
-        #backToTop:active {
-            transform: translateY(-2px) scale(0.95);
-        }
-        #backToTop.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-        #backToTop i {
-            font-size: 1rem;
-            transition: transform 0.3s ease;
-        }
-        #backToTop:hover i {
-            transform: translateY(-2px);
-        }
-        /* 进度环效果 */
-        #backToTop::before {
-            content: '';
-            position: absolute;
-            inset: -3px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, transparent 0%, rgba(30, 64, 175, 0.3) var(--scroll-progress, 0%), transparent var(--scroll-progress, 0%));
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        #backToTop.show::before {
-            opacity: 1;
-        }
-        
-        /* 布局优化 */
-        .dashboard-section {
-            margin-bottom: 2rem;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .animate-spin-slow {
-                animation: none;
-            }
-        }
-        
-        /* ==================== 全新数据预览样式 ==================== */
-        
-        #dataPreview {
-            border-radius: 1rem;
-            overflow: hidden;
-            @apply glass;
-        }
-        
-        #dataPreview .preview-header {
-            padding: 1.25rem 1.5rem;
-            background: transparent;
-            border-bottom: 1px solid rgba(241, 245, 249, 0.5);
-        }
-        
-        #dataPreview .preview-header-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        #dataPreview .preview-header-icon {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 0.625rem;
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.875rem;
-        }
-        
-        #dataPreview .preview-header-text h3 {
-            font-size: 0.9375rem;
-            font-weight: 600;
-            color: #0f172a;
-            line-height: 1.25;
-        }
-        
-        #dataPreview .preview-header-text p {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 0.125rem;
-        }
-        
-        #dataPreview .preview-stats {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        
-        #dataPreview .preview-stat-item {
-            flex: 1;
-            padding: 0.875rem 1rem;
-            background: rgba(248, 250, 252, 0.4);
-            border-radius: 0.625rem;
-            border: 1px solid rgba(241, 245, 249, 0.5);
-        }
-        
-        #dataPreview .preview-stat-label {
-            font-size: 0.6875rem;
-            font-weight: 500;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-        }
-        
-        #dataPreview .preview-stat-value {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: #0f172a;
-            margin-top: 0.25rem;
-        }
-        
-        #dataPreview .preview-stat-value span {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #94a3b8;
-            margin-left: 0.25rem;
-        }
-        
-        #dataPreview .preview-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.375rem 0.75rem;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 9999px;
-        }
-        
-        #dataPreview .preview-status-dot {
-            width: 0.375rem;
-            height: 0.375rem;
-            border-radius: 9999px;
-            background: #22c55e;
-        }
-        
-        #dataPreview .preview-status-text {
-            font-size: 0.6875rem;
-            font-weight: 500;
-            color: #15803d;
-        }
-        
-        #dataPreview .preview-table-container {
-            overflow-x: auto;
-            background: transparent;
-        }
-        
-        #dataPreview .preview-table {
-            display: grid;
-            min-width: fit-content;
-        }
-        
-        #dataPreview .preview-table-header {
-            display: contents;
-        }
-        
-        #dataPreview .preview-table-header > div {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            padding: 0.75rem 0.625rem;
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            color: #475569;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-        }
-        
-        #dataPreview .preview-table-header > div:first-child {
-            position: sticky;
-            left: 0;
-            z-index: 20;
-            background: #f1f5f9;
-            text-align: left;
-            padding-left: 1rem;
-        }
-        
-        #dataPreview .preview-table-body {
-            display: contents;
-        }
-        
-        #dataPreview .preview-table-row {
-            display: contents;
-        }
-        
-        #dataPreview .preview-table-row > div {
-            padding: 0.625rem;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 0.8125rem;
-            color: #334155;
-            text-align: center;
-            background: #ffffff;
-        }
-        
-        #dataPreview .preview-table-row > div:first-child {
-            position: sticky;
-            left: 0;
-            z-index: 5;
-            background: #ffffff;
-            text-align: left;
-            padding-left: 1rem;
-            font-weight: 500;
-            color: #0f172a;
-            border-right: 1px solid #f1f5f9;
-        }
-        
-        #dataPreview .preview-table-row:nth-child(even) > div {
-            background: #fafafa;
-        }
-        
-        #dataPreview .preview-table-row:nth-child(even) > div:first-child {
-            background: #f8fafc;
-        }
-        
-        #dataPreview .preview-table-row:hover > div {
-            background: #f0f9ff;
-        }
-        
-        #dataPreview .preview-table-row:hover > div:first-child {
-            background: #e0f2fe;
-        }
-        
-        #dataPreview .preview-table-total {
-            font-weight: 600;
-            color: #4f46e5;
-        }
-        
-        #dataPreview .preview-notice {
-            padding: 0.625rem 1rem;
-            background: #f8fafc;
-            border-top: 1px solid #f1f5f9;
-            font-size: 0.75rem;
-            color: #64748b;
-        }
-        
-        /* 响应式优化 */
-        @media (max-width: 1024px) {
-            #dataPreview .preview-header {
-                padding: 1rem;
-            }
-            
-            #dataPreview .preview-stats {
-                gap: 0.75rem;
-            }
-            
-            #dataPreview .preview-stat-item {
-                padding: 0.75rem;
-            }
-            
-            #dataPreview .preview-stat-value {
-                font-size: 1rem;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            #dataPreview {
-                border-radius: 0.75rem;
-            }
-            
-            #dataPreview .preview-header-icon {
-                width: 2.25rem;
-                height: 2.25rem;
-                font-size: 0.75rem;
-            }
-            
-            #dataPreview .preview-header-text h3 {
-                font-size: 0.875rem;
-            }
-            
-            #dataPreview .preview-stats {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            
-            #dataPreview .preview-table-header > div,
-            #dataPreview .preview-table-row > div {
-                padding: 0.5rem 0.375rem;
-                font-size: 0.75rem;
-            }
-        }
-        
-        /* ==================== 可折叠面板样式 ==================== */
-        
-
-        
-        /* ==================== 文字居中样式 ==================== */
-        
-        /**
-         * 文字居中样式
-         * 使用flexbox实现水平和垂直居中
-         */
-        .text-center-div {
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        /* ==================== 表头冻结样式 ==================== */
-        
-        /**
-         * 表头冻结样式
-         * 在滚动时保持表头可见
-         */
-        .sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background-color: white;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        /* ==================== 卡片标题栏样式 ==================== */
-        
-        /**
-         * 卡片标题栏样式
-         * 提供统一的卡片标题外观和交互效果
-         */
-        .card-header {
-            background-color: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 12px 20px;
-            font-weight: 600;
-            font-size: 16px;
-            color: #374151;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        /**
-         * 卡片标题栏悬停效果
-         */
-        .card-header:hover {
-            background-color: #f3f4f6;
-        }
-        
-        /**
-         * 卡片内容样式
-         */
-        .card-content {
-            padding: 20px;
-        }
-        
-        /* ==================== 下拉箭头动画 ==================== */
-        
-
-        
-        /* ==================== 响应式居中样式 ==================== */
-        
-        /**
-         * 响应式居中
-         * 在小屏幕设备上调整文字居中方式
-         */
-        @media (max-width: 768px) {
-            .text-center-div {
-                text-align: center;
-                display: block;
-            }
-        }
-        
-        /* ==================== 现代化卡片组件样式 ==================== */
-        
-        .card {
-            background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-            border-radius: 1rem;
-            box-shadow: 0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.3), transparent);
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
-        
-        .card:hover {
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(79, 70, 229, 0.1);
-                transform: translateY(-4px) scale(1.01);
-                border-color: rgba(79, 70, 229, 0.2);
-            }
-        
-        .card:hover::before {
-            opacity: 1;
-        }
-        
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-            background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .card-content {
-            color: #64748b;
-            line-height: 1.7;
-            font-size: 0.95rem;
-        }
-        
-        /* 特殊卡片变体 */
-        .card-glass {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .card-elevated {
-            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
-        }
-        
-        /* ==================== 现代化按钮组件样式 ==================== */
-        
-        /* 按钮尺寸变体 */
-        .btn-sm {
-            @apply px-4 py-1.5 text-xs rounded-lg;
-        }
-        
-        .btn-lg {
-            @apply px-8 py-3 text-base rounded-2xl;
-        }
-        
-        /* 按钮禁用状态 */
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important;
-        }
-
-</style>
 </head>
-<!-- 
+<!--
     ==================== HTML文档主体 ====================
     负荷曲线生成工具的主界面，包含访问验证、导航栏和主要内容区域
 -->
@@ -1596,34 +763,38 @@
             <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-40 hidden backdrop-blur-sm transition-opacity opacity-0" aria-hidden="true"></div>
 
             <!-- Dashboard Sticky Header -->
-            <div class="top-bar">
-                <div class="flex items-center gap-4">
-                    <button id="mobileMenuBtn" class="md:hidden text-slate-500 hover:text-indigo-600 transition-colors p-2 rounded-lg hover:bg-slate-100 border border-slate-200 bg-white">
+            <div class="top-bar flex items-center justify-between">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <button id="mobileMenuBtn" class="md:hidden text-slate-500 hover:text-indigo-600 transition-colors p-2 rounded-lg hover:bg-slate-100 border border-slate-200 bg-white flex-shrink-0">
                         <i class="fa fa-bars text-xl"></i>
                     </button>
-                    <div>
-                        <div class="flex flex-wrap items-center gap-3 mb-1">
-                            <h2 id="currentFileName" class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">负荷数据处理</h2>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">实时数据</span>
-                                <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 shadow-sm">
-                                    <i class="far fa-calendar-alt text-indigo-400"></i>
-                                    <span id="gsMetaDateRange">--</span>
-                                </span>
-                                <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 shadow-sm">
-                                    <i class="far fa-clock text-indigo-400"></i>
-                                    <span id="gsMetaHours">--</span>
-                                </span>
-                            </div>
+                    <div class="flex items-center gap-4 min-w-0">
+                        <h2 id="currentFileName" class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight whitespace-nowrap">负荷数据处理</h2>
+                        <div class="hidden sm:flex items-center gap-2 flex-shrink-0">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">实时数据</span>
+                        </div>
+                        <div class="hidden md:flex items-center gap-2">
+                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                                <i class="far fa-calendar-alt text-indigo-400 text-[10px]"></i>
+                                <span id="gsMetaDateRange">--</span>
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                                <i class="far fa-clock text-indigo-400 text-[10px]"></i>
+                                <span id="gsMetaHours">--</span>
+                            </span>
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="document.getElementById('fileInput').click()" class="btn-dashboard-primary !py-1.5 !text-xs">
-                        <i class="fa fa-folder-open text-indigo-500"></i>导入文件
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button onclick="document.getElementById('fileInput').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+                        <i class="fa fa-folder-open text-indigo-500 text-[10px]"></i>
+                        <span class="hidden sm:inline">导入文件</span>
+                        <span class="sm:hidden">导入</span>
                     </button>
-                    <button onclick="scrollToSection('exportSection')" class="btn-dashboard-primary !py-1.5 !text-xs">
-                        <i class="fa fa-download text-indigo-500"></i>导出报告
+                    <button onclick="scrollToSection('exportSection')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 border border-indigo-600 text-xs font-semibold text-white hover:bg-indigo-700 hover:border-indigo-700 transition-all shadow-sm shadow-indigo-100">
+                        <i class="fa fa-download text-[10px]"></i>
+                        <span class="hidden sm:inline">导出报告</span>
+                        <span class="sm:hidden">导出</span>
                     </button>
                 </div>
             </div>
@@ -1631,8 +802,8 @@
             <!-- Main Content Area -->
             <main class="flex-1 px-0 transition-all duration-300 overflow-x-hidden pt-0">
 
-                <div class="px-6 md:px-8 lg:px-10 xl:px-14 pt-12">
-                    <div id="globalSummary" class="mb-6">
+                <div class="px-6 md:px-8 lg:px-10 xl:px-14 pt-4">
+                    <div id="globalSummary" class="mb-4">
                     <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
                         <div class="relative z-10 rounded-3xl border border-slate-200 bg-white p-6 shadow-soft transition-all duration-300 hover:shadow-medium hover:border-indigo-200/50 hover:-translate-y-1 transform-gpu group overflow-visible">
                             <div class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -2392,7 +1563,7 @@
                                                 <label class="block text-[11px] font-medium text-slate-500 mb-1.5">开始时段</label>
                                                 <div class="relative">
                                                     <select id="focusStartTime" class="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-[13px] font-semibold text-slate-700 outline-none transition-all hover:border-indigo-300 hover:bg-white focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
-                                                        <option value="0">00:00</option>
+                                                        <option value="0" selected>00:00</option>
                                                         <option value="1">01:00</option>
                                                         <option value="2">02:00</option>
                                                         <option value="3">03:00</option>
@@ -2569,6 +1740,19 @@
                                         <i class="fa-solid fa-calendar-days text-xs"></i>
                                         <span>显示全部日期</span>
                                     </button>
+                                    
+                                    <!-- 时间颗粒度切换 -->
+                                    <div class="inline-flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden">
+                                        <button id="toggleTimeGrain24h" class="time-grain-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition bg-indigo-600 text-white">
+                                            <i class="fa fa-clock text-xs"></i>
+                                            <span>24小时</span>
+                                        </button>
+                                        <button id="toggleTimeGrain15min" class="time-grain-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition text-slate-600 hover:bg-slate-50">
+                                            <i class="fa fa-clock text-xs"></i>
+                                            <span>15分钟</span>
+                                        </button>
+                                    </div>
+                                    
                                     <button id="toggleSummaryMode" class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700 text-white px-3 py-1.5 text-xs font-medium hover:from-indigo-700 hover:to-indigo-800 transition shadow-sm shadow-indigo-100">
                                         <i class="fa fa-layer-group text-xs"></i>
                                         <span>汇总曲线</span>
@@ -2835,9 +2019,9 @@
                                                 <i class="fa fa-box-archive text-xs group-hover:scale-110 transition-transform"></i>
                                                 <span>完整数据包</span>
                                             </button>
-                                            <button id="export15MinData" class="group flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 font-medium text-xs hover:bg-indigo-100 hover:border-indigo-200 transition-all shadow-sm hover:-translate-y-0.5" title="导出15分钟明细数据">
-                                                <i class="fa fa-clock text-xs group-hover:scale-110 transition-transform"></i>
-                                                <span>15min 明细</span>
+                                            <button id="export15MinDataFiltered" class="group flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 font-medium text-xs hover:bg-emerald-100 hover:border-emerald-200 transition-all shadow-sm hover:-translate-y-0.5" title="导出15分钟数据">
+                                                <i class="fa fa-filter text-xs group-hover:scale-110 transition-transform"></i>
+                                                <span>15min 有效数据</span>
                                             </button>
                                         </div>
                                         
@@ -3363,8 +2547,8 @@
                         <div class="space-y-2">
                             <label class="text-sm font-bold text-slate-700">数据点显示</label>
                             <select id="showPoints" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10">
+                                <option value="false" selected>隐藏数据点</option>
                                 <option value="true">显示数据点</option>
-                                <option value="false">隐藏数据点</option>
                             </select>
                         </div>
                     </div>

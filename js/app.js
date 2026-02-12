@@ -38,20 +38,23 @@
                 additionalFilters: []
             },
             visualization: {
-        selectedDates: [],
-        selectedMeteringPoints: [],
-        focusStartTime: 0,
-        focusEndTime: 23,
-        lineStyle: 'solid',
-        showPoints: false,
-        secondaryAxis: false,
-        smoothCurve: true,
-        curveTension: 0.4,
-        showDailyTotalBarChart: true,
-        barChartAggregation: 'daily', // 'daily' or 'monthly'
-        allCurvesMode: false, // 默认显示单日日期曲线
-        summaryMode: false, // 是否处于汇总曲线模式
-            summarySubMode: 'all' // 'all' | 'extreme' | 'quarter' | 'month' - 汇总子模式
+                selectedDates: [],
+                selectedMeteringPoints: [],
+                focusStartTime: 0,
+                focusEndTime: 23,
+                timeGrain: '24h',  // '24h' 或 '15min'
+                lineStyle: 'solid',
+                showPoints: false,
+                secondaryAxis: false,
+                smoothCurve: true,
+                curveTension: 0.4,
+                showDailyTotalBarChart: true,
+                barChartAggregation: 'daily',
+                allCurvesMode: false,
+                summaryMode: false,
+                summarySubMode: 'all',
+                // 15分钟数据缓存
+                _15minDataCache: new Map()
         },
             chart: null,
             dailyTotalBarChart: null, // 存储日期总用电量图表引用
@@ -192,7 +195,7 @@
             exportJPGBtn: document.getElementById('exportJPG'),
             exportSVGBtn: document.getElementById('exportSVG'),
             exportPDFBtn: document.getElementById('exportPDF'),
-            export15MinDataBtn: document.getElementById('export15MinData'),
+            export15MinDataFiltered: document.getElementById('export15MinDataFiltered'),
             exportHourlyDataBtn: document.getElementById('exportHourlyData'),
             exportDailyStatsBtn: document.getElementById('exportDailyStats'),
             exportSummaryCurveDataBtn: document.getElementById('exportSummaryCurveData'),
@@ -780,6 +783,52 @@
                 });
             }
 
+            // 新增：时间颗粒度切换按钮事件
+            const toggleTimeGrain24h = document.getElementById('toggleTimeGrain24h');
+            const toggleTimeGrain15min = document.getElementById('toggleTimeGrain15min');
+            
+            if (toggleTimeGrain24h && toggleTimeGrain15min) {
+                const updateTimeGrainUI = (grain) => {
+                    if (grain === '15min') {
+                        toggleTimeGrain15min.classList.add('bg-indigo-600', 'text-white');
+                        toggleTimeGrain15min.classList.remove('text-slate-600', 'hover:bg-slate-50');
+                        toggleTimeGrain24h.classList.remove('bg-indigo-600', 'text-white');
+                        toggleTimeGrain24h.classList.add('text-slate-600', 'hover:bg-slate-50');
+                    } else {
+                        toggleTimeGrain24h.classList.add('bg-indigo-600', 'text-white');
+                        toggleTimeGrain24h.classList.remove('text-slate-600', 'hover:bg-slate-50');
+                        toggleTimeGrain15min.classList.remove('bg-indigo-600', 'text-white');
+                        toggleTimeGrain15min.classList.add('text-slate-600', 'hover:bg-slate-50');
+                    }
+                };
+                
+                toggleTimeGrain24h.addEventListener('click', () => {
+                    if (appData.visualization.timeGrain !== '24h') {
+                        appData.visualization.timeGrain = '24h';
+                        updateTimeGrainUI('24h');
+                        // 销毁并重新创建图表以确保标签格式正确更新
+                        if (appData.chart) {
+                            appData.chart.destroy();
+                            appData.chart = null;
+                        }
+                        initializeVisualization();
+                    }
+                });
+                
+                toggleTimeGrain15min.addEventListener('click', () => {
+                    if (appData.visualization.timeGrain !== '15min') {
+                        appData.visualization.timeGrain = '15min';
+                        updateTimeGrainUI('15min');
+                        // 销毁并重新创建图表以确保标签格式正确更新
+                        if (appData.chart) {
+                            appData.chart.destroy();
+                            appData.chart = null;
+                        }
+                        initializeVisualization();
+                    }
+                });
+            }
+
             // 新增：显示全部日期切换按钮
             const allCurvesBtn = document.getElementById('toggleAllCurves');
             if (allCurvesBtn) {
@@ -945,7 +994,7 @@
                 });
             }
 
-            if (elements.export15MinDataBtn) elements.export15MinDataBtn.addEventListener('click', () => requestExportAction('data_15min'));
+            if (elements.export15MinDataFiltered) elements.export15MinDataFiltered.addEventListener('click', () => requestExportAction('data_15min'));
             if (elements.exportHourlyDataBtn) elements.exportHourlyDataBtn.addEventListener('click', () => requestExportAction('data_24h'));
             if (elements.exportDailyStatsBtn) elements.exportDailyStatsBtn.addEventListener('click', () => requestExportAction('data_daily_stats'));
             if (elements.exportSummaryCurveDataBtn) elements.exportSummaryCurveDataBtn.addEventListener('click', () => requestExportAction('data_summary_curve'));
@@ -1317,6 +1366,11 @@
             if (files.length === 0) return;
 
             setImportStatus('processing');
+            
+            // 清除15分钟数据缓存
+            if (appData.visualization._15minDataCache) {
+                appData.visualization._15minDataCache.clear();
+            }
 
             let importedNewCount = 0;
             let failureCount = 0;
@@ -5202,10 +5256,25 @@ async function distributeStagnantEnergy() {
 
                 
                 const ctx = elements.loadCurveChart.getContext('2d');
+                
+                // 根据当前时间颗粒度生成初始标签
+                const timeGrain = appData.visualization.timeGrain || '24h';
+                let initialLabels;
+                if (timeGrain === '15min') {
+                    initialLabels = [];
+                    for (let h = 0; h < 24; h++) {
+                        for (let q = 0; q < 4; q++) {
+                            initialLabels.push(`${h.toString().padStart(2, '0')}:${(q * 15).toString().padStart(2, '0')}`);
+                        }
+                    }
+                } else {
+                    initialLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+                }
+                
                 appData.chart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+                        labels: initialLabels,
                         datasets: []
                     },
                     options: {
@@ -5223,16 +5292,53 @@ async function distributeStagnantEnergy() {
                             mode: 'index',
                             intersect: false
                         },
+                        elements: {
+                            point: {
+                                radius: 0,
+                                hoverRadius: 0
+                            },
+                            line: {
+                                tension: 0.4
+                            }
+                        },
                         animation: {
                             duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1000,
                             easing: 'easeOutCubic',
-                            delay: (context) => {
-                                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
-                                let delay = 0;
-                                if (context.type === 'data' && context.mode === 'default') {
-                                    delay = context.dataIndex * 30;
+                            x: {
+                                type: 'number',
+                                easing: 'linear',
+                                duration: 0
+                            },
+                            y: {
+                                type: 'number',
+                                easing: 'easeOutCubic',
+                                duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1000,
+                                from: (ctx) => {
+                                    // 从Y轴底部开始生长
+                                    return ctx.chart.scales.y.getPixelForValue(ctx.chart.scales.y.min);
                                 }
-                                return delay;
+                            }
+                        },
+                        transitions: {
+                            active: {
+                                animation: {
+                                    duration: 300
+                                }
+                            },
+                            resize: {
+                                animation: {
+                                    duration: 0
+                                }
+                            },
+                            show: {
+                                animation: {
+                                    duration: 300
+                                }
+                            },
+                            hide: {
+                                animation: {
+                                    duration: 300
+                                }
                             }
                         },
                         plugins: {
@@ -5387,6 +5493,7 @@ async function distributeStagnantEnergy() {
                                     }
                                 },
                                 beginAtZero: true,
+                                grace: '5%',
                                 grid: {
                                     color: 'rgba(0, 0, 0, 0.05)',
                                     lineWidth: 1,
@@ -5400,8 +5507,13 @@ async function distributeStagnantEnergy() {
                                     },
                                     padding: 8,
                                     callback: function(value) {
+                                        // 对于小数值，直接显示，避免重复刻度
+                                        if (Math.abs(value) < 1) {
+                                            return value.toFixed(2);
+                                        }
                                         return smartFormatNumber(value, 1);
-                                    }
+                                    },
+                                    maxTicksLimit: 8
                                 }
                             },
                             y1: {
@@ -5560,18 +5672,146 @@ async function distributeStagnantEnergy() {
                 const lineStyle = appData.visualization.lineStyle;
                 const showPoints = appData.visualization.showPoints;
                 const secondaryAxis = appData.visualization.secondaryAxis;
+                const timeGrain = appData.visualization.timeGrain || '24h';
                 
                 // 更新X轴标签范围
                 const startHour = appData.visualization.focusStartTime;
                 const endHour = appData.visualization.focusEndTime;
                 
-                const newLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`).slice(startHour, endHour + 1);
+                let newLabels;
+                
+                // 根据时间颗粒度生成不同的标签
+                if (timeGrain === '15min') {
+                    // 15分钟颗粒度：每小时4个点，共96个点
+                    const totalPoints = (endHour - startHour + 1) * 4;
+                    newLabels = [];
+                    for (let h = startHour; h <= endHour; h++) {
+                        for (let q = 0; q < 4; q++) {
+                            // 统一格式：小时:分钟（两位数）
+                            newLabels.push(`${h.toString().padStart(2, '0')}:${(q * 15).toString().padStart(2, '0')}`);
+                        }
+                    }
+                } else {
+                    // 24小时颗粒度：每小时1个点
+                    newLabels = Array.from({ length: 24 }, (_, i) => `${i}:00`).slice(startHour, endHour + 1);
+                }
                 appData.chart.data.labels = newLabels;
                 
                 // ---------------------------------------------------------
                 // 3. 构建数据集 (新增发电曲线逻辑)
                 // ---------------------------------------------------------
                 const datasets = [];
+                
+                // 性能优化：预先创建 parsedData 的 Map，避免重复 find 操作
+                const parsedDataMap = new Map();
+                for (const p of appData.parsedData) {
+                    const processedDate = toProcessedDateString(p.dateStr);
+                    if (processedDate) {
+                        parsedDataMap.set(processedDate, p);
+                    }
+                }
+                
+                // 性能优化：预先创建 processedData 的 Map
+                const processedDataMap = new Map();
+                for (const d of appData.processedData) {
+                    processedDataMap.set(d.date, d);
+                }
+                
+                // 辅助函数：根据时间颗粒度获取数据（带缓存）- 提前定义供汇总和明细模式使用
+                const getTimeSeriesData = (dayData, grain) => {
+                    if (grain === '15min') {
+                        // 检查缓存
+                        const cacheKey = `${dayData.date}_${startHour}_${endHour}`;
+                        if (appData.visualization._15minDataCache.has(cacheKey)) {
+                            return appData.visualization._15minDataCache.get(cacheKey);
+                        }
+                        
+                        // 使用 Map 快速查找（O(1) 而不是 O(n)）
+                        const parsedRow = parsedDataMap.get(dayData.date);
+                        
+                        if (parsedRow && parsedRow.rawData && parsedRow.rawData.length > 0) {
+                            const rawData = parsedRow.rawData;
+                            // 使用用户设置的倍率（优先）或原始数据中的倍率
+                            const multiplier = (typeof parsedRow.multiplier === 'number' && isFinite(parsedRow.multiplier)) 
+                                ? parsedRow.multiplier 
+                                : (appData.config.multiplier || 1);
+                            const timeInterval = parsedRow.timeInterval || 15;
+                            
+                            // 使用缓存键（不含时间范围）存储完整的15分钟数据
+                            const fullCacheKey = `${dayData.date}_full`;
+                            let data15min;
+                            
+                            if (appData.visualization._15minDataCache.has(fullCacheKey)) {
+                                data15min = appData.visualization._15minDataCache.get(fullCacheKey);
+                            } else {
+                                data15min = [];
+                                
+                                // 根据原始数据的时间间隔进行转换
+                                if (timeInterval === 15 && rawData.length === 96) {
+                                    data15min = rawData.slice();
+                                } else if (timeInterval === 1 && rawData.length === 1440) {
+                                    for (let h = 0; h < 24; h++) {
+                                        for (let q = 0; q < 4; q++) {
+                                            const startIdx = h * 60 + q * 15;
+                                            let sum = 0, count = 0;
+                                            for (let i = 0; i < 15 && (startIdx + i) < rawData.length; i++) {
+                                                const val = rawData[startIdx + i];
+                                                if (val !== null && val !== undefined) { sum += val; count++; }
+                                            }
+                                            data15min.push(count > 0 ? sum / count : null);
+                                        }
+                                    }
+                                } else if (timeInterval === 5 && rawData.length === 288) {
+                                    for (let h = 0; h < 24; h++) {
+                                        for (let q = 0; q < 4; q++) {
+                                            const startIdx = h * 12 + q * 3;
+                                            let sum = 0, count = 0;
+                                            for (let i = 0; i < 3 && (startIdx + i) < rawData.length; i++) {
+                                                const val = rawData[startIdx + i];
+                                                if (val !== null && val !== undefined) { sum += val; count++; }
+                                            }
+                                            data15min.push(count > 0 ? sum / count : null);
+                                        }
+                                    }
+                                } else {
+                                    const pointsPer15min = rawData.length / 96;
+                                    for (let i = 0; i < 96; i++) {
+                                        const startIdx = Math.floor(i * pointsPer15min);
+                                        const endIdx = Math.floor((i + 1) * pointsPer15min);
+                                        let sum = 0, count = 0;
+                                        for (let j = startIdx; j < endIdx && j < rawData.length; j++) {
+                                            const val = rawData[j];
+                                            if (val !== null && val !== undefined) { sum += val; count++; }
+                                        }
+                                        data15min.push(count > 0 ? sum / count : null);
+                                    }
+                                }
+                                
+                                // 缓存完整的15分钟数据
+                                appData.visualization._15minDataCache.set(fullCacheKey, data15min);
+                            }
+                            
+                            // 提取指定时间范围的数据，并将功率(kW)转换为电量(kWh)
+                            const result = [];
+                            const startIdx = startHour * 4;
+                            const endIdx = (endHour + 1) * 4;
+                            
+                            for (let i = startIdx; i < endIdx && i < data15min.length; i++) {
+                                const val = data15min[i];
+                                result.push(val !== null && val !== undefined ? val * multiplier * 0.25 : null);
+                            }
+                            
+                            const expectedPoints = (endHour - startHour + 1) * 4;
+                            while (result.length < expectedPoints) result.push(null);
+                            
+                            // 缓存结果
+                            appData.visualization._15minDataCache.set(cacheKey, result);
+                            return result;
+                        }
+                        return null;
+                    }
+                    return dayData.hourlyData?.slice(startHour, endHour + 1);
+                };
                 
                 // 如果是汇总模式...
                 if (appData.visualization.summaryMode) {
@@ -5593,36 +5833,66 @@ async function distributeStagnantEnergy() {
                     const maxDay = days.reduce((prev, current) => (prev.total > current.total) ? prev : current);
                     const minDay = days.reduce((prev, current) => (prev.total < current.total && prev.total > 0) ? prev : current);
                     
-                    // 计算平均负荷曲线 (仅正向)
-                    const avgSeries = (dayList) => {
-                        return new Array(24).fill(0).map((_, h) => {
-                            let sum = 0;
-                            let count = 0;
-                            dayList.forEach(d => {
-                                const val = d.hourlyData[h];
-                                if (val !== null) {
-                                    sum += val;
-                                    count++;
-                                }
-                            });
-                            return count > 0 ? sum / count : null;
-                        });
+                    // 在15分钟模式下，获取15分钟数据用于汇总曲线
+                    const get15MinDataForDay = (dayData) => {
+                        if (timeGrain !== '15min') return null;
+                        return getTimeSeriesData(dayData, '15min');
                     };
                     
-                    // 提取曲线数据 (截取选定时段)
-                    const sliceData = (arr) => arr.slice(startHour, endHour + 1);
+                    // 计算平均负荷曲线 (仅正向)
+                    const avgSeries = (dayList) => {
+                        if (timeGrain === '15min') {
+                            // 15分钟模式：计算15分钟粒度的平均值
+                            const result = new Array((endHour - startHour + 1) * 4).fill(null);
+                            dayList.forEach(d => {
+                                const data15min = get15MinDataForDay(d);
+                                if (data15min) {
+                                    data15min.forEach((val, idx) => {
+                                        if (val !== null) {
+                                            if (result[idx] === null) result[idx] = { sum: 0, count: 0 };
+                                            result[idx].sum += val;
+                                            result[idx].count++;
+                                        }
+                                    });
+                                }
+                            });
+                            return result.map(r => r && r.count > 0 ? r.sum / r.count : null);
+                        } else {
+                            // 24小时模式
+                            return new Array(24).fill(0).map((_, h) => {
+                                let sum = 0;
+                                let count = 0;
+                                dayList.forEach(d => {
+                                    const val = d.hourlyData[h];
+                                    if (val !== null) {
+                                        sum += val;
+                                        count++;
+                                    }
+                                });
+                                return count > 0 ? sum / count : null;
+                            }).slice(startHour, endHour + 1);
+                        }
+                    };
                     
-                    const maxDaySeries = sliceData(maxDay.hourlyData);
-                    const minDaySeries = sliceData(minDay.hourlyData);
+                    // 提取曲线数据
+                    let maxDaySeries, minDaySeries;
+                    if (timeGrain === '15min') {
+                        maxDaySeries = get15MinDataForDay(maxDay);
+                        minDaySeries = get15MinDataForDay(minDay);
+                    } else {
+                        const sliceData = (arr) => arr.slice(startHour, endHour + 1);
+                        maxDaySeries = sliceData(maxDay.hourlyData);
+                        minDaySeries = sliceData(minDay.hourlyData);
+                    }
                     
-                    // 辅助函数：创建数据集
-                    const makeDataset = (label, data, color, borderDash = [], isSummary = false) => {
+                    // 辅助函数：创建数据集（优化版）
+                    const makeDataset = (label, data, color, borderDash = [], isSummary = false, isHighlight = false) => {
                         const curveCount = appData.processedData.length;
                         let width = 2;
                         
                         if (isSummary) {
-                            // 汇总曲线始终保持较粗的线条，突出显示
-                            width = 4;
+                            // 汇总曲线：关键曲线更粗，辅助曲线适中
+                            width = isHighlight ? 2.5 : 1.8;
                         } else {
                             // 明细曲线根据数量动态调整
                             if (curveCount > 50) width = 0.8;
@@ -5631,18 +5901,34 @@ async function distributeStagnantEnergy() {
                             else width = 2.4;
                         }
 
+                        // 解析颜色并创建渐变填充
+                        let backgroundColor = color;
+                        if (isSummary && isHighlight) {
+                            // 关键汇总曲线添加淡色填充区域
+                            const colorMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                            if (colorMatch) {
+                                backgroundColor = `rgba(${colorMatch[1]}, ${colorMatch[2]}, ${colorMatch[3]}, 0.1)`;
+                            }
+                        }
+
+                        const pointRadius = showPoints ? (isSummary ? (isHighlight ? 4 : 2) : (curveCount > 30 ? 1 : 2)) : 0;
+                        
                         return {
                             label,
                             data,
                             borderColor: color,
-                            backgroundColor: color,
+                            backgroundColor: backgroundColor,
                             borderWidth: width,
-                            pointRadius: showPoints ? (isSummary ? 4 : (curveCount > 30 ? 1 : 3)) : 0,
-                            pointHoverRadius: isSummary ? 7 : 5,
-                            fill: false,
-                            tension: 0.4,
+                            pointRadius: pointRadius,
+                            pointHoverRadius: pointRadius > 0 ? (isSummary ? (isHighlight ? 6 : 4) : 4) : 0,
+                            pointBackgroundColor: color,
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: isSummary ? 2 : 1,
+                            fill: isSummary && isHighlight,
+                            tension: 0.35,
                             borderDash,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            hoverBorderWidth: width + 1,
                         };
                     };
 
@@ -5661,33 +5947,33 @@ async function distributeStagnantEnergy() {
 
                     // 计算各月平均曲线
                     const monthSeries = new Array(12).fill(null).map((_, i) => 
-                        monthGroups[i] ? sliceData(avgSeries(monthGroups[i])) : null
+                        monthGroups[i] ? avgSeries(monthGroups[i]) : null
                     );
 
                     // 计算季度平均
-                    const q1Series = sliceData(avgSeries(days.filter(d => d.dateObj.getMonth() <= 2)));
-                    const q2Series = sliceData(avgSeries(days.filter(d => { const m = d.dateObj.getMonth(); return m >= 3 && m <= 5; })));
-                    const q3Series = sliceData(avgSeries(days.filter(d => { const m = d.dateObj.getMonth(); return m >= 6 && m <= 8; })));
-                    const q4Series = sliceData(avgSeries(days.filter(d => d.dateObj.getMonth() >= 9)));
+                    const q1Series = avgSeries(days.filter(d => d.dateObj.getMonth() <= 2));
+                    const q2Series = avgSeries(days.filter(d => { const m = d.dateObj.getMonth(); return m >= 3 && m <= 5; }));
+                    const q3Series = avgSeries(days.filter(d => { const m = d.dateObj.getMonth(); return m >= 6 && m <= 8; }));
+                    const q4Series = avgSeries(days.filter(d => d.dateObj.getMonth() >= 9));
 
                     const subMode = appData.visualization.summarySubMode || 'all';
 
-                    // 1. 最高/最低用电日 + 平均负荷 (extreme)
+                    // 1. 最高/最低用电日 + 平均负荷 (extreme) - 使用更鲜明的颜色
                     if (subMode === 'all' || subMode === 'extreme') {
-                        datasets.push(makeDataset(`最高用电日 (${formatDateForInput(maxDay.dateObj)})`, maxDaySeries, 'rgb(220, 38, 38)', [], true));  // 红色-最高
-                        datasets.push(makeDataset(`最低用电日 (${formatDateForInput(minDay.dateObj)})`, minDaySeries, 'rgb(37, 99, 235)', [], true));   // 蓝色-最低
+                        datasets.push(makeDataset(`最高用电日 (${formatDateForInput(maxDay.dateObj)})`, maxDaySeries, 'rgb(239, 68, 68)', [], true, true));  // 红色-最高
+                        datasets.push(makeDataset(`最低用电日 (${formatDateForInput(minDay.dateObj)})`, minDaySeries, 'rgb(59, 130, 246)', [], true, true));   // 蓝色-最低
                         
                         // 计算全局平均负荷
-                        const globalAvgSeries = sliceData(avgSeries(days));
-                        datasets.push(makeDataset('全周期平均负荷', globalAvgSeries, 'rgb(71, 85, 105)', [8, 4], true)); // 深灰-平均
+                        const globalAvgSeries = avgSeries(days);
+                        datasets.push(makeDataset('全周期平均负荷', globalAvgSeries, 'rgb(100, 116, 139)', [10, 5], true, false)); // 灰色虚线-平均
                     }
                     
-                    // 2. 季度平均 (quarter)
+                    // 2. 季度平均 (quarter) - 使用协调的季节色彩
                     if (subMode === 'all' || subMode === 'quarter') {
-                        datasets.push(makeDataset('Q1平均(1-3月)', q1Series, 'rgb(5, 150, 105)', [6, 4], true));      // 绿色-春季
-                        datasets.push(makeDataset('Q2平均(4-6月)', q2Series, 'rgb(245, 158, 11)', [6, 4], true));     // 琥珀色-夏季
-                        datasets.push(makeDataset('Q3平均(7-9月)', q3Series, 'rgb(234, 88, 12)', [6, 4], true));      // 橙色-秋季
-                        datasets.push(makeDataset('Q4平均(10-12月)', q4Series, 'rgb(30, 64, 175)', [6, 4], true));    // 深蓝-冬季
+                        datasets.push(makeDataset('Q1平均(1-3月)', q1Series, 'rgb(34, 197, 94)', [6, 3], true, false));      // 绿色-春季
+                        datasets.push(makeDataset('Q2平均(4-6月)', q2Series, 'rgb(251, 191, 36)', [6, 3], true, false));     // 金色-夏季
+                        datasets.push(makeDataset('Q3平均(7-9月)', q3Series, 'rgb(249, 115, 22)', [6, 3], true, false));      // 橙色-秋季
+                        datasets.push(makeDataset('Q4平均(10-12月)', q4Series, 'rgb(79, 70, 229)', [6, 3], true, false));    // 靛蓝-冬季
                     }
 
                     // 3. 月平均 (month)
@@ -5695,7 +5981,7 @@ async function distributeStagnantEnergy() {
                         for (let m = 1; m <= 12; m++) {
                             if (monthSeries[m - 1].some(v => v !== null)) {
                                 datasets.push(
-                                    makeDataset(`${m}月平均`, monthSeries[m - 1], monthColors[m - 1], [4, 2], true)
+                                    makeDataset(`${m}月平均`, monthSeries[m - 1], monthColors[m - 1], [3, 3], true, false)
                                 );
                             }
                         }
@@ -5706,19 +5992,18 @@ async function distributeStagnantEnergy() {
                 // 明细模式：绘制所选日期的曲线
                 let selectedDates = appData.visualization.selectedDates || [];
                 
-                // 性能保护：限制显示的曲线数量
-                if (selectedDates.length > 100) {
-                    showNotification('性能提示', `已自动限制显示前100条曲线（共 ${selectedDates.length} 条）以保证流畅度`, 'warning');
-                    selectedDates = selectedDates.slice(0, 100);
-                }
+                // 显示全部曲线，无数量限制
                 
                 selectedDates.forEach((date, index) => {
-                    const dayData = appData.processedData.find(d => d.date === date);
+                    // 使用 Map 快速查找（O(1) 而不是 O(n)）
+                    const dayData = processedDataMap.get(date);
                     if (dayData) {
                         const color = getColorForIndex(index);
                         
-                        // 1. 用电曲线 (正向)
-                        const hourlyDataSlice = dayData.hourlyData.slice(startHour, endHour + 1);
+                        // 获取时间序列数据（支持15分钟颗粒度）
+                        const timeSeriesData = getTimeSeriesData(dayData, timeGrain);
+                        
+                        if (!timeSeriesData) return; // 如果没有15分钟数据则跳过
                         
                         // 根据曲线数量动态调整线宽
                         const curveCount = selectedDates.length;
@@ -5734,16 +6019,16 @@ async function distributeStagnantEnergy() {
                         }
 
                         datasets.push({
-                            label: `${date} (用电)`,
-                            data: hourlyDataSlice,
+                            label: `${date} (${timeGrain === '15min' ? '15min' : '用电'})`,
+                            data: timeSeriesData,
                             borderColor: color,
                             backgroundColor: color,
                             borderWidth: dynamicBorderWidth,
                             pointRadius: dynamicPointRadius,
-                            pointHoverRadius: dynamicPointRadius + 2,
+                            pointHoverRadius: dynamicPointRadius > 0 ? dynamicPointRadius + 2 : 0,
                             fill: false,
                             tension: appData.visualization.smoothCurve ? (appData.visualization.curveTension || 0.4) : 0,
-                            borderDash: [], // 实线
+                            borderDash: [],
                             yAxisID: 'y'
                         });
                         
@@ -5763,7 +6048,7 @@ async function distributeStagnantEnergy() {
                                 backgroundColor: genColor,
                                 borderWidth: dynamicBorderWidth,
                                 pointRadius: dynamicPointRadius,
-                                pointHoverRadius: dynamicPointRadius + 2,
+                                pointHoverRadius: dynamicPointRadius > 0 ? dynamicPointRadius + 2 : 0,
                                 fill: {
                                     target: 'origin',
                                     above: 'rgba(16, 185, 129, 0.1)', 
@@ -5780,12 +6065,54 @@ async function distributeStagnantEnergy() {
             
             appData.chart.data.datasets = datasets;
             
-            // 更新Y轴标题
-            if (appData.chart.options.scales.y) {
-                appData.chart.options.scales.y.title.text = '用电量 (kWh) / 上网电量 (-kWh)';
+            // 更新Y轴标题（仅在需要时更新）
+            const yTitle = '用电量 (kWh) / 上网电量 (-kWh)';
+            if (appData.chart.options.scales.y?.title?.text !== yTitle) {
+                if (appData.chart.options.scales.y) {
+                    appData.chart.options.scales.y.title.text = yTitle;
+                }
             }
             
-            appData.chart.update();
+            // 根据时间颗粒度调整X轴刻度显示（仅在切换模式时更新）
+            const currentGrain = appData.chart._lastTimeGrain;
+            if (currentGrain !== timeGrain && appData.chart.options.scales.x) {
+                appData.chart._lastTimeGrain = timeGrain;
+                
+                if (timeGrain === '15min') {
+                    appData.chart.options.scales.x.ticks.callback = function(value, index, values) {
+                        const label = this.getLabelForValue(value);
+                        if (!label) return '';
+                        if (label.endsWith(':00')) {
+                            const hour = parseInt(label.split(':')[0], 10);
+                            return `${hour}:00`;
+                        }
+                        return '';
+                    };
+                    appData.chart.options.scales.x.ticks.maxRotation = 0;
+                    appData.chart.options.scales.x.ticks.autoSkip = false;
+                    appData.chart.options.scales.x.ticks.stepSize = undefined;
+                } else {
+                    appData.chart.options.scales.x.ticks.callback = function(value, index, values) {
+                        const label = this.getLabelForValue(value);
+                        return label || '';
+                    };
+                    appData.chart.options.scales.x.ticks.maxRotation = 0;
+                    appData.chart.options.scales.x.ticks.autoSkip = false;
+                    appData.chart.options.scales.x.ticks.stepSize = undefined;
+                }
+            }
+            
+            // 根据时间颗粒度设置不同的动画速度
+            // 15分钟模式数据点多，使用更快的动画
+            if (timeGrain === '15min') {
+                // 临时设置更短的动画时间
+                const originalDuration = appData.chart.options.animation.duration;
+                appData.chart.options.animation.duration = 300;
+                appData.chart.update();
+                appData.chart.options.animation.duration = originalDuration;
+            } else {
+                appData.chart.update();  // 默认动画
+            }
             
             // ---------------------------------------------------------
             // 4. 计算并渲染全局汇总 (如果处于明细模式且未开启汇总视图)
@@ -5794,8 +6121,13 @@ async function distributeStagnantEnergy() {
             // 但如果已经处于 summaryMode，则不需要重复计算，因为 updateDataOverview 会处理
             // 这里主要处理图表更新后的联动（如需要）
             
-            // 更新统计信息
-            updateStatistics(getOverviewData(), startHour, endHour);
+            // 更新统计信息（使用节流，避免频繁计算）
+            if (!appData._statsUpdateTimer) {
+                appData._statsUpdateTimer = setTimeout(() => {
+                    updateStatistics(getOverviewData(), startHour, endHour);
+                    appData._statsUpdateTimer = null;
+                }, 100);
+            }
 
             // 更新步骤 3 状态
             updateStepStatus(3, true);
@@ -6241,7 +6573,7 @@ async function distributeStagnantEnergy() {
                 
                 // 根据用户设置确定是否显示数据点
                 const pointRadius = appData.visualization.showPoints ? 4 : 0;
-                const pointHoverRadius = 6;
+                const pointHoverRadius = pointRadius > 0 ? 6 : 0;
                 
                 // 根据用户设置确定曲线平滑度
                 const tension = appData.visualization.smoothCurve ? appData.visualization.curveTension : 0;
@@ -6358,7 +6690,7 @@ async function distributeStagnantEnergy() {
                     borderCapStyle: 'round',
                     borderJoinStyle: 'round',
                     pointRadius: pr,
-                    pointHoverRadius: 6,
+                    pointHoverRadius: pr > 0 ? 6 : 0,
                     pointStyle: 'circle',
                     pointBackgroundColor: color,
                     pointBorderColor: color,
@@ -7065,11 +7397,11 @@ async function distributeStagnantEnergy() {
                         <td class="px-4 py-4 text-left text-xs text-indigo-900 font-black sticky left-0 z-50 bg-inherit pl-6 border-r border-indigo-100/50">累计汇总</td>
                         ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] text-slate-400 font-bold border-r border-indigo-100/50">-</td>` : ''}
                         <td class="px-4 py-4 text-right text-sm text-indigo-700 font-black tabular-nums">${formatNum(statsSummary.totalPeriod)}</td>
-                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-700 bg-emerald-100/20 tabular-nums">${formatNum(statsSummary.totalGeneration)}</td>` : ''}
+                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-700 bg-[#ecfdf5] tabular-nums">${formatNum(statsSummary.totalGeneration)}</td>` : ''}
                         <td class="px-4 py-4 text-center text-xs text-indigo-900 font-black tabular-nums">${formatPct(overallPeriodPercentage)}</td>
                         <td class="px-4 py-4 text-center text-[10px] text-slate-400 font-black tabular-nums">100.0%</td>
                         <td class="px-4 py-4 text-right text-xs text-slate-700 font-bold tabular-nums">-</td>
-                        <td class="px-4 py-4 text-right text-sm font-black text-indigo-900 bg-indigo-100/20 pr-6 tabular-nums">${formatNum(statsSummary.totalDaily)}</td>
+                        <td class="px-4 py-4 text-right text-sm font-black text-indigo-900 bg-[#eef2ff] pr-6 tabular-nums">${formatNum(statsSummary.totalDaily)}</td>
                     </tr>
                 `;
 
@@ -7079,11 +7411,11 @@ async function distributeStagnantEnergy() {
                         <td class="px-4 py-4 text-left text-xs text-slate-600 font-black sticky left-0 z-50 bg-inherit pl-6 border-r border-slate-100/50">平均数值</td>
                         ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] text-slate-400 font-bold border-r border-slate-100/50">-</td>` : ''}
                         <td class="px-4 py-4 text-right text-sm text-indigo-600 font-black tabular-nums">${formatNum(statsAvg.periodTotal)}</td>
-                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-600 bg-emerald-50/10 tabular-nums">${formatNum(statsAvg.periodGeneration)}</td>` : ''}
+                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-600 bg-[#f0fdf4] tabular-nums">${formatNum(statsAvg.periodGeneration)}</td>` : ''}
                         <td class="px-4 py-4 text-center text-xs text-slate-700 font-black tabular-nums">${formatPct(statsAvg.dailyPercentage)}</td>
                         <td class="px-4 py-4 text-center text-[10px] text-slate-400 font-black tabular-nums">${formatPct(statsAvg.yearlyPercentage)}</td>
                         <td class="px-4 py-4 text-right text-xs text-slate-600 font-black tabular-nums">${formatNum(statsAvg.hourlyAverage)}</td>
-                        <td class="px-4 py-4 text-right text-sm font-black text-slate-700 bg-slate-50/50 pr-6 tabular-nums">${formatNum(statsAvg.dailyTotal)}</td>
+                        <td class="px-4 py-4 text-right text-sm font-black text-slate-700 bg-[#f8fafc] pr-6 tabular-nums">${formatNum(statsAvg.dailyTotal)}</td>
                     </tr>
                 `;
 
@@ -8659,7 +8991,7 @@ async function distributeStagnantEnergy() {
                 }
             });
 
-            return { rows, baseName: effectiveInterval === 15 ? '15分钟明细' : `${effectiveInterval}分钟明细` };
+            return { rows, baseName: '15分钟数据' };
         }
 
         function export15MinData(params = {}) {
@@ -8671,6 +9003,86 @@ async function distributeStagnantEnergy() {
             }
             setExportProgress(30, '导出中');
             exportDataToFile(built.rows, built.baseName, { fileName: params.fileName });
+        }
+
+        // 构建15分钟数据行（仅包含有效数据的时刻）
+        function build15MinRowsFiltered(params = {}) {
+            const opts = params.opts || {};
+            if (!Array.isArray(appData.parsedData) || appData.parsedData.length === 0) {
+                return { rows: [], baseName: '', error: '没有可导出的数据' };
+            }
+
+            const exportAllDates = document.getElementById('exportAllDates')?.checked ?? true;
+            const startDate = document.getElementById('exportStartDate')?.value || '';
+            const endDate = document.getElementById('exportEndDate')?.value || '';
+            const selectedDates = new Set(appData?.visualization?.selectedDates || []);
+
+            const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
+            const end = endDate ? new Date(`${endDate}T00:00:00`) : null;
+
+            const candidates = [];
+            for (const parsedRow of appData.parsedData) {
+                const date = toProcessedDateString(parsedRow.dateStr);
+                
+                if (!exportAllDates) {
+                    if (start && end) {
+                        const d = new Date(`${date}T00:00:00`);
+                        if (!(d >= start && d <= end)) continue;
+                    } else {
+                        if (!selectedDates.has(date)) continue;
+                    }
+                }
+                
+                if (opts.weekdaysOnly && !isWeekdayDate(date)) continue;
+                
+                candidates.push({
+                    date,
+                    meteringPoint: normalizeMeteringPoint(parsedRow.meteringPoint),
+                    rawData: Array.isArray(parsedRow.rawData) ? parsedRow.rawData : [],
+                    multiplier: typeof parsedRow.multiplier === 'number' && isFinite(parsedRow.multiplier) ? parsedRow.multiplier : (appData.config.multiplier || 1),
+                    timeInterval: typeof parsedRow.timeInterval === 'number' && isFinite(parsedRow.timeInterval) ? parsedRow.timeInterval : (appData.config.timeInterval || 15)
+                });
+            }
+
+            if (candidates.length === 0) {
+                return { rows: [], baseName: '', error: '没有符合筛选条件的数据可导出' };
+            }
+
+            // 只处理15分钟间隔的数据
+            const timeLabels = [];
+            for (let h = 0; h < 24; h++) {
+                for (let q = 0; q < 4; q++) {
+                    timeLabels.push(`${h.toString().padStart(2, '0')}:${(q * 15).toString().padStart(2, '0')}`);
+                }
+            }
+
+            // 只导出有效数据（有时间刻度的行）
+            const header = ['日期', '时间刻度', '数值 (kWh)'];
+            const rows = [header];
+
+            candidates.forEach(({ date, meteringPoint, rawData, multiplier }) => {
+                // 遍历每个15分钟刻度
+                for (let i = 0; i < Math.min(rawData.length, 96); i++) {
+                    const val = rawData[i];
+                    // 只导出有效数据（非null、非undefined、非0）
+                    if (val !== null && val !== undefined && val !== 0 && !isNaN(val)) {
+                        const hour = Math.floor(i / 4);
+                        const minute = (i % 4) * 15;
+                        const timeLabel = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                        rows.push([
+                            date,
+                            timeLabel,
+                            (val * multiplier).toFixed(4)
+                        ]);
+                    }
+                }
+            });
+
+            if (rows.length <= 1) {
+                return { rows: [], baseName: '', error: '没有有效的15分钟数据可导出' };
+            }
+
+            return { rows, baseName: '15分钟有效数据' };
         }
 
         function buildHourlyRows(params = {}) {
@@ -9841,9 +10253,9 @@ async function distributeStagnantEnergy() {
             const overview = XLSX.utils.aoa_to_sheet(buildOverviewRows(dataForOverview));
             XLSX.utils.book_append_sheet(wb, overview, '概况');
 
-            const d15 = build15MinRows({ opts });
+            const d15 = build15MinRowsFiltered({ opts });
             if (d15.rows && d15.rows.length) {
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d15.rows), d15.baseName || '15min明细');
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d15.rows), '15min数据');
             }
 
             const d24 = buildHourlyRows({ opts });
@@ -12510,9 +12922,9 @@ async function distributeStagnantEnergy() {
                         </select>
                     </div>
                     <div id="advancedFilterOptions" class="space-y-3"></div>
-                    <div class="flex justify-end gap-3 pt-2">
-                        <button id="advancedFiltersCancel" class="btn-secondary">取消</button>
-                        <button id="advancedFiltersApply" class="btn-rose">应用</button>
+                    <div class="flex justify-end gap-3 pt-4">
+                        <button id="advancedFiltersCancel" class="btn-base btn-secondary px-6">取消</button>
+                        <button id="advancedFiltersApply" class="btn-base btn-rose px-6">应用</button>
                     </div>
                 </div>
             `;
