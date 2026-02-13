@@ -563,7 +563,6 @@
     .sidebar-link:hover {
         background-color: #334155;
         color: #f1f5f9;
-        transform: translateX(4px);
     }
     
     .sidebar-link:hover::before {
@@ -581,7 +580,7 @@
     }
     
     .sidebar-link:active {
-        transform: scale(0.98);
+        opacity: 0.9;
     }
     
     .sidebar-container {
@@ -619,10 +618,22 @@
         border-bottom: none;
         box-shadow: none;
     }
-    
+
     @media (min-width: 768px) {
         .top-bar {
             padding: 1rem 2rem 0.5rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .top-bar {
+            padding: 1rem 2.5rem 0.5rem;
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .top-bar {
+            padding: 1rem 3.5rem 0.5rem;
         }
     }
     
@@ -734,7 +745,7 @@
 
 /* ==================== 数据预览样式（现代化设计） ==================== */
 #dataPreview {
-    border-radius: 1.5rem;
+    border-radius: 0 0 1.5rem 1.5rem;
     overflow: hidden;
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -964,6 +975,207 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+/* ==================== 简约高级感表格样式 ==================== */
+/* Minimalist Premium Table Design */
+
+/* 表格容器 - 极简边框 */
+.minimal-table-container {
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* 表格主体 - 极简网格 */
+.minimal-table {
+    display: grid;
+    min-width: fit-content;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 表头样式 - 极简灰度 */
+.minimal-table-header {
+    display: contents;
+}
+
+.minimal-table-header > div {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 14px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+    text-align: center;
+    letter-spacing: 0.03em;
+    text-transform: none;
+}
+
+/* 首列表头 - 固定列 */
+.minimal-table-header > div:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: #ffffff;
+    text-align: left;
+    padding-left: 20px;
+    border-right: 1px solid #f8fafc;
+}
+
+/* 末列表头 */
+.minimal-table-header > div:last-child {
+    text-align: right;
+    padding-right: 20px;
+}
+
+/* 表格行 */
+.minimal-table-body {
+    display: contents;
+}
+
+.minimal-table-row {
+    display: contents;
+}
+
+.minimal-table-row > div {
+    padding: 12px;
+    border-bottom: 1px solid #f8fafc;
+    font-size: 12px;
+    color: #475569;
+    text-align: center;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    font-feature-settings: "tnum";
+}
+
+/* 首列数据 - 日期列 */
+.minimal-table-row > div:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #ffffff;
+    text-align: left;
+    padding-left: 20px;
+    font-weight: 500;
+    color: #334155;
+    border-right: 1px solid #f8fafc;
+}
+
+/* 末列数据 - 总计列 */
+.minimal-table-row > div:last-child {
+    text-align: right;
+    padding-right: 20px;
+    font-weight: 600;
+    color: #6366f1;
+}
+
+/* 隔行背景 - 极淡区分 */
+.minimal-table-row:nth-child(even) > div {
+    background: #fafafa;
+}
+
+.minimal-table-row:nth-child(even) > div:first-child {
+    background: #fafafa;
+}
+
+/* 悬停效果 - 极简 */
+.minimal-table-row:hover > div {
+    background: #f8fafc;
+}
+
+.minimal-table-row:hover > div:first-child {
+    background: #f8fafc;
+    color: #1e293b;
+}
+
+/* 汇总行样式 - 冻结在底部 */
+.minimal-table-row.summary-cumulative > div {
+    position: sticky;
+    bottom: 48px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: #1e293b;
+    z-index: 10;
+}
+
+.minimal-table-row.summary-cumulative > div:first-child {
+    background: #f8fafc;
+    font-weight: 700;
+    color: #0f172a;
+    z-index: 20;
+}
+
+.minimal-table-row.summary-cumulative > div:last-child {
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+/* 平均行样式 - 冻结在底部 */
+.minimal-table-row.summary-average > div {
+    position: sticky;
+    bottom: 0;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+    font-weight: 500;
+    color: #475569;
+    z-index: 5;
+}
+
+.minimal-table-row.summary-average > div:first-child {
+    background: #ffffff;
+    font-weight: 600;
+    color: #334155;
+    z-index: 15;
+}
+
+.minimal-table-row.summary-average > div:last-child {
+    color: #6366f1;
+    font-weight: 600;
+}
+
+/* 省略行 */
+.minimal-table-ellipsis {
+    grid-column: 1 / -1;
+    padding: 12px 20px;
+    background: #fafafa;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+/* 底部汇总区域 */
+.minimal-table-summary {
+    position: sticky;
+    bottom: 0;
+    z-index: 15;
+}
+
+/* 响应式优化 */
+@media (max-width: 1024px) {
+    .minimal-table-header > div,
+    .minimal-table-row > div {
+        padding: 10px 8px;
+        font-size: 11px;
+    }
+    
+    .minimal-table-header > div:first-child,
+    .minimal-table-row > div:first-child {
+        padding-left: 16px;
+    }
+    
+    .minimal-table-header > div:last-child,
+    .minimal-table-row > div:last-child {
+        padding-right: 16px;
+    }
 }
 
 #dataPreview .preview-notice i {

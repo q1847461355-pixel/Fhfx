@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -698,9 +698,9 @@
     <!-- Layout Wrapper -->
     <div class="flex min-h-screen overflow-x-hidden pt-0">
         <!-- Left Sidebar -->
-        <aside id="sidebar" class="fixed top-0 left-0 w-[260px] h-screen bg-slate-900 text-slate-300 transition-transform duration-300 ease-in-out z-50 flex flex-col shadow-xl -translate-x-full md:translate-x-0">
+        <aside id="sidebar" class="fixed top-0 left-0 w-[260px] h-screen bg-slate-900 text-slate-300 transition-transform duration-200 ease-out z-50 flex flex-col shadow-xl -translate-x-full md:translate-x-0">
             <!-- Brand -->
-            <div class="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-900/50 shrink-0">
+            <div class="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-900 shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-900/50">
                         <i class="fa fa-chart-line text-white text-sm"></i>
@@ -708,45 +708,45 @@
                     <span class="text-lg font-bold text-white tracking-wide">EnergyLens</span>
                 </div>
             </div>
-        
+
             <!-- Navigation -->
             <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
                 <!-- Section Label -->
                 <div class="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">主要功能</div>
-                
+
                 <!-- Nav Items -->
-                <a href="javascript:void(0)" onclick="scrollToSection('importSection')" class="sidebar-link active flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-slate-800 hover:text-white group gap-3" data-section="importSection">
+                <a href="javascript:void(0)" onclick="scrollToSection('importSection')" class="sidebar-link active flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 hover:bg-slate-800 hover:text-white group gap-3" data-section="importSection">
                     <i class="fas fa-cloud-upload-alt w-5 text-center"></i>
                     <span>数据导入</span>
                 </a>
-                
-                <a href="javascript:void(0)" onclick="scrollToSection('configSection')" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-slate-800 hover:text-white group gap-3" data-section="configSection">
+
+                <a href="javascript:void(0)" onclick="scrollToSection('configSection')" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 hover:bg-slate-800 hover:text-white group gap-3" data-section="configSection">
                     <i class="fas fa-sliders-h w-5 text-center"></i>
                     <span>数据配置</span>
                 </a>
-                
-                <a href="javascript:void(0)" onclick="scrollToSection('visualizationSection')" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-slate-800 hover:text-white group gap-3" data-section="visualizationSection">
+
+                <a href="javascript:void(0)" onclick="scrollToSection('visualizationSection')" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 hover:bg-slate-800 hover:text-white group gap-3" data-section="visualizationSection">
                     <i class="fas fa-chart-area w-5 text-center"></i>
                     <span>负荷分析</span>
                 </a>
-                
-                <a href="javascript:void(0)" onclick="scrollToSection('exportSection')" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-slate-800 hover:text-white group gap-3" data-section="exportSection">
+
+                <a href="javascript:void(0)" onclick="scrollToSection('exportSection')" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 hover:bg-slate-800 hover:text-white group gap-3" data-section="exportSection">
                     <i class="fas fa-file-export w-5 text-center"></i>
                     <span>导出报告</span>
                 </a>
 
                 <div class="px-3 mt-8 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">系统设置</div>
-                
-                <a href="javascript:void(0)" id="helpBtn" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-slate-800 hover:text-white group gap-3">
+
+                <a href="javascript:void(0)" id="helpBtn" class="sidebar-link flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 hover:bg-slate-800 hover:text-white group gap-3">
                     <i class="fas fa-question-circle w-5 text-center"></i>
                     <span>使用指南</span>
                 </a>
             </nav>
 
             <!-- Sidebar Footer -->
-            <div class="border-t border-slate-800 p-4 bg-slate-900/50">
+            <div class="border-t border-slate-800 p-4 bg-slate-900">
                 <div class="flex items-center gap-3 px-2">
-                    <div class="w-8 h-8 rounded-full bg-indigo-900/50 border border-indigo-700/50 flex items-center justify-center text-indigo-400">
+                    <div class="w-8 h-8 rounded-full bg-indigo-900 border border-indigo-700 flex items-center justify-center text-indigo-400">
                         <i class="fa fa-user text-xs"></i>
                     </div>
                     <div class="flex-1 min-w-0">
@@ -760,38 +760,38 @@
         <!-- Main Content Area -->
         <div class="flex-1 min-w-0 flex flex-col md:ml-[260px]">
             <!-- Mobile Sidebar Overlay -->
-            <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/50 z-40 hidden backdrop-blur-sm transition-opacity opacity-0" aria-hidden="true"></div>
+            <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/60 z-40 hidden transition-opacity opacity-0" aria-hidden="true"></div>
 
             <!-- Dashboard Sticky Header -->
-            <div class="top-bar flex items-center justify-between">
-                <div class="flex items-center gap-4 flex-1 min-w-0">
-                    <button id="mobileMenuBtn" class="md:hidden text-slate-500 hover:text-indigo-600 transition-colors p-2 rounded-lg hover:bg-slate-100 border border-slate-200 bg-white flex-shrink-0">
+            <div class="top-bar flex items-center justify-between h-14">
+                <div class="flex items-center gap-4 flex-1 min-w-0 h-full">
+                    <button id="mobileMenuBtn" class="md:hidden text-slate-500 hover:text-indigo-600 transition-colors p-2 rounded-lg hover:bg-slate-100 border border-slate-200 bg-white flex-shrink-0 h-10">
                         <i class="fa fa-bars text-xl"></i>
                     </button>
-                    <div class="flex items-center gap-4 min-w-0">
-                        <h2 id="currentFileName" class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight whitespace-nowrap">负荷数据处理</h2>
+                    <div class="flex items-center gap-3 min-w-0 h-full">
+                        <h2 id="currentFileName" class="text-xl md:text-2xl font-black text-slate-800 tracking-tight whitespace-nowrap leading-none">负荷数据处理</h2>
                         <div class="hidden sm:flex items-center gap-2 flex-shrink-0">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">实时数据</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">实时数据</span>
                         </div>
                         <div class="hidden md:flex items-center gap-2">
-                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                                 <i class="far fa-calendar-alt text-indigo-400 text-[10px]"></i>
                                 <span id="gsMetaDateRange">--</span>
                             </span>
-                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                                 <i class="far fa-clock text-indigo-400 text-[10px]"></i>
                                 <span id="gsMetaHours">--</span>
                             </span>
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    <button onclick="document.getElementById('fileInput').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+                <div class="flex items-center gap-2 flex-shrink-0 h-full">
+                    <button onclick="document.getElementById('fileInput').click()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm h-9">
                         <i class="fa fa-folder-open text-indigo-500 text-[10px]"></i>
                         <span class="hidden sm:inline">导入文件</span>
                         <span class="sm:hidden">导入</span>
                     </button>
-                    <button onclick="scrollToSection('exportSection')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 border border-indigo-600 text-xs font-semibold text-white hover:bg-indigo-700 hover:border-indigo-700 transition-all shadow-sm shadow-indigo-100">
+                    <button onclick="scrollToSection('exportSection')" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 border border-indigo-600 text-xs font-semibold text-white hover:bg-indigo-700 hover:border-indigo-700 transition-all shadow-sm shadow-indigo-100 h-9">
                         <i class="fa fa-download text-[10px]"></i>
                         <span class="hidden sm:inline">导出报告</span>
                         <span class="sm:hidden">导出</span>
@@ -853,6 +853,15 @@
         <!-- 导航图标样式 (已废弃) -->
         <style>
             /* 旧导航样式已移除，保留此标签防止脚本报错，但内容清空 */
+            
+            /* 页面区块显示/隐藏控制 */
+            .section-hidden {
+                display: none !important;
+            }
+            
+            .section-visible {
+                display: block !important;
+            }
         </style>
 
         <!-- 
@@ -860,7 +869,7 @@
             提供数据导入功能，支持Excel文件上传和预览
             使用卡片式布局，包含标题、描述和文件上传控件
         -->
-        <section id="importSection" class="mb-14 section-container section-hidden">
+        <section id="importSection" class="mb-14 section-container section-visible">
             <div class="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-soft">
                 <div class="relative px-6 py-6 md:px-8 md:py-8">
                     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1961,7 +1970,7 @@
                                             </div>
                                         </div>
                                         
-                                        <div class="grid grid-cols-3 gap-2">
+                                        <div class="grid grid-cols-3 gap-2 flex-1">
                                             <button id="exportPNG" class="group flex flex-col items-center justify-center gap-2 py-3 rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/30 hover:text-indigo-600 hover:-translate-y-0.5 hover:shadow-sm transition-all" title="导出为PNG">
                                                 <i class="fa fa-file-image text-xl text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
                                                 <span class="text-xs font-medium">PNG</span>
@@ -1976,15 +1985,10 @@
                                             </button>
                                         </div>
 
-                                        <button id="exportPDF" class="group w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-bold text-sm hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-md shadow-indigo-100 hover:shadow-lg hover:shadow-indigo-200 hover:-translate-y-0.5" title="生成PDF专业报告">
-                                            <i class="fa fa-file-pdf text-sm group-hover:scale-110 transition-transform"></i>
-                                            <span>生成 PDF 专业报告</span>
-                                        </button>
-
                                         <div class="rounded-lg bg-slate-50 border border-slate-200 p-3 mt-auto">
                                             <p class="text-xs text-slate-500 leading-relaxed">
                                                 <i class="fa fa-info-circle text-slate-400 mr-1"></i>
-                                                PDF 报告将包含当前视图下的所有可视化图表与数据摘要
+                                                支持多种格式导出当前视图图表
                                             </p>
                                         </div>
                                     </div>
@@ -3153,7 +3157,8 @@
         }
 
         async function performAIAnalysis() {
-            const data = getRealDataForAnalysis();
+            // 使用扩展数据（包含统计卡片等）
+            const data = getExtendedAnalysisData();
             
             if (!data.hasData) {
                 aiAnalysisContent.innerHTML = `
@@ -3165,11 +3170,23 @@
                 return;
             }
 
+            // 初始化对话UI（如果还没有）
+            initAIChatUI();
+            
+            // 显示欢迎状态隐藏
+            const welcomeState = document.getElementById('aiWelcomeState');
+            const chatHistory = document.getElementById('aiChatHistory');
+            if (welcomeState) welcomeState.style.display = 'none';
+            if (chatHistory) chatHistory.innerHTML = '';
+            
+            // 添加分析结果到对话历史
+            const analysisIntro = "📊 正在进行月度趋势与季节性负荷建模分析...";
+            
             aiAnalysisContent.innerHTML = `
                 <div class="flex flex-col gap-4">
                     <div class="flex items-center gap-3 text-indigo-600 animate-pulse">
                         <i class="fa fa-spinner fa-spin"></i>
-                        <span class="font-bold text-sm">资深工程师正在进行月度趋势与季节性负荷建模分析...</span>
+                        <span class="font-bold text-sm">资深工程师正在进行数据分析...</span>
                     </div>
                     <div class="space-y-3 opacity-50">
                         <div class="h-4 bg-slate-100 rounded-full w-3/4"></div>
@@ -3192,7 +3209,26 @@
                     analysisText = generateMockAnalysis(data);
                 }
                 
-                renderAnalysis(analysisText);
+                // 添加到对话历史
+                if (chatHistory) {
+                    // 用户消息
+                    const userMsg = document.createElement('div');
+                    userMsg.className = 'flex justify-end';
+                    userMsg.innerHTML = `<div class="bg-indigo-600 text-white rounded-2xl px-4 py-2 max-w-[85%] text-sm">分析当前数据</div>`;
+                    chatHistory.appendChild(userMsg);
+                    
+                    // AI回复
+                    const aiMsg = document.createElement('div');
+                    aiMsg.className = 'flex justify-start';
+                    aiMsg.innerHTML = `<div class="bg-slate-100 rounded-2xl px-4 py-2 max-w-[95%] text-sm whitespace-pre-wrap">${analysisText.replace(/\n/g, '<br>')}</div>`;
+                    chatHistory.appendChild(aiMsg);
+                    
+                    // 保存到历史记录
+                    aiChatHistory.push({ role: 'user', content: '分析当前数据' });
+                    aiChatHistory.push({ role: 'assistant', content: analysisText });
+                } else {
+                    renderAnalysis(analysisText);
+                }
             } catch (error) {
                 aiAnalysisContent.innerHTML = `
                     <div class="p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs">
@@ -3293,6 +3329,268 @@
         if (runAiAnalysisBtn) {
             runAiAnalysisBtn.addEventListener('click', performAIAnalysis);
         }
+
+        // ==== 增强AI对话功能 ====
+        let aiChatHistory = [];
+        
+        // 动态添加对话输入区域
+        function initAIChatUI() {
+            const panel = document.getElementById('aiAnalysisPanel');
+            if (!panel || document.getElementById('aiChatInputContainer')) return;
+            
+            // 调整内容区域并添加聊天历史元素
+            const contentDiv = document.getElementById('aiAnalysisContent');
+            if (contentDiv) {
+                contentDiv.className = 'p-4 text-[14px] text-slate-700 leading-relaxed min-h-[120px] max-h-[280px] overflow-y-auto custom-scrollbar';
+                // 添加聊天历史和欢迎状态容器
+                contentDiv.innerHTML = `
+                    <div id="aiChatHistory" class="space-y-4 mb-4"></div>
+                    <div id="aiWelcomeState" class="flex flex-col items-center justify-center py-4 text-slate-400">
+                        <i class="fa fa-comment-dots text-2xl mb-2 opacity-20"></i>
+                        <p class="text-xs">点击"分析当前数据"按钮获取专业见解，或在下方输入问题</p>
+                    </div>
+                `;
+            }
+            
+            // 添加对话输入区域
+            const chatInputHTML = `
+                <div id="aiChatInputContainer" class="border-t border-indigo-100 p-3 bg-slate-50/50">
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="aiChatInput" class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all" placeholder="输入您的问题...">
+                        <button id="aiSendBtn" class="px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                            <i class="fa fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2 flex-wrap">
+                        <span class="text-[10px] text-slate-400 mr-2">快捷:</span>
+                        <button class="quick-q-btn text-[10px] px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-colors" data-q="总用电量是多少？">总用电量</button>
+                        <button class="quick-q-btn text-[10px] px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-colors" data-q="最高负荷出现在什么时候？">最高负荷</button>
+                        <button class="quick-q-btn text-[10px] px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-colors" data-q="给出节能建议">节能建议</button>
+                    </div>
+                </div>
+            `;
+            panel.insertAdjacentHTML('beforeend', chatInputHTML);
+            
+            // 绑定事件
+            const chatInput = document.getElementById('aiChatInput');
+            const sendBtn = document.getElementById('aiSendBtn');
+            
+            if (sendBtn && chatInput) {
+                sendBtn.addEventListener('click', () => sendChatMessage(chatInput.value));
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendChatMessage(chatInput.value);
+                });
+                
+                // 快捷问题按钮
+                document.querySelectorAll('.quick-q-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        sendChatMessage(btn.dataset.q);
+                    });
+                });
+            }
+        }
+        
+        // 发送聊天消息
+        async function sendChatMessage(message) {
+            if (!message.trim()) return;
+            
+            const chatInput = document.getElementById('aiChatInput');
+            const chatHistory = document.getElementById('aiChatHistory');
+            const welcomeState = document.getElementById('aiWelcomeState');
+            
+            if (!chatHistory) {
+                initAIChatUI();
+                return sendChatMessage(message);
+            }
+            
+            // 隐藏欢迎状态
+            if (welcomeState) welcomeState.style.display = 'none';
+            
+            // 添加用户消息
+            const userMsg = document.createElement('div');
+            userMsg.className = 'flex justify-end';
+            userMsg.innerHTML = `<div class="bg-indigo-600 text-white rounded-2xl px-4 py-2 max-w-[85%] text-sm">${message}</div>`;
+            chatHistory.appendChild(userMsg);
+            
+            // 清空输入
+            if (chatInput) chatInput.value = '';
+            
+            // 添加AI回复占位
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'flex justify-start';
+            aiMsg.innerHTML = `<div class="bg-slate-100 rounded-2xl px-4 py-2 max-w-[85%] text-sm flex items-center gap-2"><i class="fa fa-spinner fa-spin text-indigo-600"></i>思考中...</div>`;
+            chatHistory.appendChild(aiMsg);
+            
+            // 滚动到底部
+            const contentDiv = document.getElementById('aiAnalysisContent');
+            if (contentDiv) contentDiv.scrollTop = contentDiv.scrollHeight;
+            
+            // 保存到历史
+            aiChatHistory.push({ role: 'user', content: message });
+            
+            try {
+                // 获取扩展数据
+                const analysisData = getExtendedAnalysisData();
+                const reply = await getAIChatReply(message, analysisData);
+                
+                // 更新AI回复
+                aiMsg.innerHTML = `<div class="bg-slate-100 rounded-2xl px-4 py-2 max-w-[85%] text-sm">${reply}</div>`;
+                aiChatHistory.push({ role: 'assistant', content: reply });
+            } catch (error) {
+                aiMsg.innerHTML = `<div class="bg-red-50 text-red-600 rounded-2xl px-4 py-2 max-w-[85%] text-sm">抱歉: ${error.message}</div>`;
+            }
+            
+            // 滚动到底部
+            if (contentDiv) contentDiv.scrollTop = contentDiv.scrollHeight;
+        }
+        
+        // 获取扩展分析数据（包含统计卡片等）
+        function getExtendedAnalysisData() {
+            const data = getRealDataForAnalysis();
+            
+            // 添加更多统计信息
+            if (data.hasData && typeof appData !== 'undefined' && appData.processedData) {
+                try {
+                    const processedData = appData.processedData;
+                    
+                    // 获取顶部卡片数据
+                    const gsTotalEnergy = document.getElementById('gsTotalEnergy');
+                    const gsAvgLoad = document.getElementById('gsAvgLoad');
+                    const gsMaxDay = document.getElementById('gsMaxDay');
+                    
+                    data.cardData = {
+                        totalEnergy: gsTotalEnergy?.textContent || '--',
+                        avgLoad: gsAvgLoad?.textContent || '--',
+                        maxDay: gsMaxDay?.textContent || '--'
+                    };
+                    
+                    // 计算更多统计数据
+                    let allValues = [];
+                    processedData.forEach(d => {
+                        if (d.hourlyData) {
+                            allValues = allValues.concat(d.hourlyData.filter(v => v != null));
+                        }
+                    });
+                    
+                    if (allValues.length > 0) {
+                        data.stats = {
+                            min: Math.min(...allValues).toFixed(2),
+                            max: Math.max(...allValues).toFixed(2),
+                            avg: (allValues.reduce((a, b) => a + b, 0) / allValues.length).toFixed(2),
+                            count: allValues.length
+                        };
+                    }
+                    
+                    // 获取负荷曲线数据
+                    if (processedData.length > 0) {
+                        const hourlySums = new Array(24).fill(0);
+                        const hourlyCounts = new Array(24).fill(0);
+                        
+                        processedData.forEach(d => {
+                            if (d.hourlyData) {
+                                d.hourlyData.forEach((v, h) => {
+                                    if (v != null) {
+                                        hourlySums[h] += v;
+                                        hourlyCounts[h]++;
+                                    }
+                                });
+                            }
+                        });
+                        
+                        data.avgHourlyCurve = hourlySums.map((s, i) => 
+                            hourlyCounts[i] > 0 ? (s / hourlyCounts[i]).toFixed(2) : 0
+                        );
+                    }
+                    
+                } catch (e) {
+                    console.error('获取扩展数据失败:', e);
+                }
+            }
+            
+            return data;
+        }
+        
+        // 获取AI对话回复
+        async function getAIChatReply(question, data) {
+            const systemPrompt = `你是一位资深电力工程专家，擅长根据用户的具体问题提供精准的数据分析和建议。请根据以下数据回答用户问题，如果数据不足请明确说明。
+
+可用的数据字段：
+- totalEnergy: 总用电量(kWh)
+- monthlyData: 月度用电数据
+- seasonalData: 季度用电数据
+- avgHourlyCurve: 平均24小时负荷曲线(24个数值)
+- maxMonth: 最高负荷月份
+- minMonth: 最低负荷月份
+- dataSpan: 数据时间范围
+- cardData: 页面顶部卡片数据 {totalEnergy, avgLoad, maxDay}
+- stats: 详细统计 {min, max, avg, count}
+
+请用简洁专业的语言回答，直接给出结论和建议，字数控制在200字以内。`;
+            
+            const userPrompt = `用户问题: ${question}
+
+数据: ${JSON.stringify(data)}
+
+请回答:`;
+            
+            if (aiConfig.apiKey) {
+                const baseUrl = aiConfig.apiBase || 'https://api.openai.com/v1';
+                const response = await fetch(`${baseUrl}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${aiConfig.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: aiConfig.model || 'gpt-3.5-turbo',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            ...aiChatHistory.slice(-5),
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: 0.7
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || 'API请求失败');
+                }
+                
+                const result = await response.json();
+                return result.choices[0].message.content;
+            } else {
+                // 模拟回复
+                await new Promise(resolve => setTimeout(resolve, 800));
+                return generateMockChatReply(question, data);
+            }
+        }
+        
+        // 生成模拟回复
+        function generateMockChatReply(question, data) {
+            const q = question.toLowerCase();
+            
+            if (q.includes('用电量') || q.includes('总电')) {
+                return `根据当前数据，总用电量为 <strong>${data.cardData?.totalEnergy || data.totalEnergy || '--'}</strong> kWh。数据时间范围: ${data.dataSpan || '--'}。如需更详细的分析，请查看月度用电分布。`;
+            }
+            
+            if (q.includes('负荷') || q.includes('峰值') || q.includes('最大')) {
+                return `最高负荷出现在 <strong>${data.maxMonth || '--'}</strong>，平均负荷为 <strong>${data.cardData?.avgLoad || data.stats?.avg || '--'}</strong> kW。最高单日: ${data.cardData?.maxDay || '--'}。建议关注高峰时段的负荷管理。`;
+            }
+            
+            if (q.includes('节能') || q.includes('优化') || q.includes('建议')) {
+                return `节能建议: 1) 关注${data.maxMonth}高峰时段，可考虑需量优化；2) 平均负荷曲线显示日间负荷较高，建议配置光伏；3) 建议将设备维保安排在${data.minMonth}低谷期。可配置API获取更精准的建议。`;
+            }
+            
+            if (q.includes('月') || q.includes('季度') || q.includes('季节')) {
+                return `月度用电分布: ${data.monthlyData || '暂无数据'}。季度分布: ${data.seasonalData || '暂无数据'}。最高月${data.maxMonth}，最低月${data.minMonth}，呈现明显的季节性特征。`;
+            }
+            
+            return `根据当前数据，我了解到以下信息:\n- 总用电量: ${data.totalEnergy || '--'} kWh\n- 最高月份: ${data.maxMonth || '--'}\n- 最低月份: ${data.minMonth || '--'}\n- 数据范围: ${data.dataSpan || '--'}\n\n您可以继续询问具体问题，如"总用电量是多少？"或"有什么节能建议？"`;
+        }
+        
+        // 初始化对话UI
+        initAIChatUI();
         
         // PDF预览功能
         const pdfPreviewModal = document.getElementById('pdfPreviewModal');

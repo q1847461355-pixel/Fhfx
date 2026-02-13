@@ -3406,16 +3406,11 @@
         
         // 构建数据表格
          function buildDataTable(dataStructure) {
-             let tableHtml = `<div class="max-h-[420px] overflow-auto bg-white">`;
-             
              if (dataStructure === 'columnToRow') {
-                 tableHtml += buildHourlyDataTable();
+                 return buildHourlyDataTable();
              } else {
-                 tableHtml += buildSummaryDataTable();
+                 return buildSummaryDataTable();
              }
-             
-             tableHtml += `</div>`;
-             return tableHtml;
          }
          
         // 构建24小时数据表格
@@ -3441,29 +3436,22 @@
             const tableScrollHint = document.getElementById('tableScrollHint');
             if (tableScrollHint) tableScrollHint.classList.remove('hidden');
 
-            // 定义 z-index 层级常量，确保层叠关系正确
-            const Z_INDEX = {
-                BODY: 'z-0',
-                LEFT_COL: 'z-20',
-                TOP_HEADER: 'z-30',
-                CORNER_HEADER: 'z-50', // 左上角固定 - 最高级
-                SUMMARY_ROW: 'z-40',   // 底部汇总行
-                SUMMARY_CORNER: 'z-[51]' // 底部左侧固定 - 必须高于汇总行和左侧列
-            };
-
-            let tableHtml = `<div class="grid" style="grid-template-columns: 140px repeat(24, 84px) 140px; min-width: fit-content; content-visibility: auto; row-gap: 0;">`;
-
-            // --- 表头部分 ---
-            // 左上角“日期”单元格 - 最高层级，使用纯色背景防止透视
-            tableHtml += `<div class="bg-slate-50 border-b-2 border-slate-200 px-4 py-4 text-left text-[11px] font-black text-slate-500 sticky top-0 left-0 ${Z_INDEX.CORNER_HEADER}">日期</div>`;
-            
-            // 24小时小时表头
+            // 简约高级感表格 - 使用新的CSS类
+            let tableHtml = `<div class="max-h-[420px] overflow-auto bg-white">
+                <div class="minimal-table" style="grid-template-columns: 110px repeat(24, minmax(64px, 1fr)) 100px;">`;
+            // 表头 - 极简风格
+            tableHtml += `<div class="minimal-table-header">`;
+            tableHtml += `<div>日期</div>`;
             for (let hour = 0; hour < 24; hour++) {
-                tableHtml += `<div class="bg-slate-50 border-b-2 border-slate-200 px-2 py-4 text-center text-[11px] font-black text-slate-500 sticky top-0 ${Z_INDEX.TOP_HEADER}">${hour}:00</div>`;
+                tableHtml += `<div>${hour}:00</div>`;
             }
+            tableHtml += `<div>日总 kWh</div>`;
+            tableHtml += `</div>`;
             
-            // 右侧“日总”表头
-            tableHtml += `<div class="bg-slate-50 border-b-2 border-slate-200 px-3 py-4 text-right text-[11px] font-black text-slate-500 sticky top-0 ${Z_INDEX.TOP_HEADER} pr-6">日总 (kWh)</div>`;
+            // 表格主体
+            tableHtml += `<div class="minimal-table-body">`;
+
+
 
             const totalRows = appData.processedData.length;
             const headLimit = 25;
@@ -3475,35 +3463,18 @@
                 const isCumulative = isSummary && row.date === '累计汇总';
                 const isAverage = isSummary && row.date === '平均数值';
                 
-                // 行背景色 - 彻底移除半透明，解决用户提到的“透视”问题
-                let rowBgClass = '';
-                if (isSummary) {
-                    rowBgClass = isCumulative ? 'bg-indigo-50' : 'bg-slate-50';
-                } else {
-                    rowBgClass = rowIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+                // 行类型类
+                let rowClass = 'minimal-table-row';
+                if (isCumulative) {
+                    rowClass += ' summary-cumulative';
+                } else if (isAverage) {
+                    rowClass += ' summary-average';
                 }
-                
-                // 边框样式 - 汇总行顶部增加一条明显的线，明确区域划分
-                const borderClass = isSummary 
-                    ? (isCumulative ? 'border-t border-slate-200' : 'border-t border-slate-100') 
-                    : 'border-b border-slate-100';
-                
-                // 汇总行特殊样式 - 移除 backdrop-blur 避免性能消耗和视觉残留
-                const summaryShadow = isSummary ? 'shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.05)]' : ''; 
-                const stickyRowClass = isSummary ? 'sticky bottom-0' : '';
-                
-                // 调整偏移量，确保两行汇总行能够堆叠
-                const stickyRowOffset = isAverage ? 'bottom-0' : (isCumulative ? 'bottom-[48px]' : '');
-                const zIndexRow = isSummary ? Z_INDEX.SUMMARY_ROW : Z_INDEX.BODY;
-                const zIndexLeft = isSummary ? Z_INDEX.SUMMARY_CORNER : Z_INDEX.LEFT_COL;
 
-                let rowHtml = '';
+                let rowHtml = `<div class="${rowClass}">`;
 
                 // 1. 日期列 (冻结首列)
-                const dateFontClass = isSummary ? 'font-black' : 'font-bold';
-                const dateTextClass = isSummary ? (isCumulative ? 'text-indigo-900' : 'text-slate-700') : 'text-slate-700';
-                
-                rowHtml += `<div class="${rowBgClass} ${borderClass} ${summaryShadow} px-4 py-4 text-left text-xs ${dateFontClass} ${dateTextClass} sticky left-0 ${zIndexLeft} ${stickyRowClass} ${stickyRowOffset}">${row.date}</div>`;
+                rowHtml += `<div>${row.date}</div>`;
 
                 // 2. 24小时数据列
                 let dayTotal = 0;
@@ -3511,16 +3482,7 @@
                     const value = row.hourlyData[hour];
                     const displayValue = (value !== null && value !== undefined) ? value.toFixed(2) : '-';
                     
-                    // 数值样式
-                    let textClass = '';
-                    if (isSummary) {
-                        textClass = isCumulative ? 'text-indigo-900' : 'text-slate-800';
-                    } else {
-                        textClass = (value !== null && value !== undefined) ? 'text-slate-600' : 'text-slate-300';
-                    }
-                    const fontClass = isSummary ? 'font-black' : 'font-medium';
-                    
-                    rowHtml += `<div class="${rowBgClass} ${borderClass} ${summaryShadow} px-2 py-4 text-right text-xs ${fontClass} ${textClass} ${zIndexRow} ${stickyRowClass} ${stickyRowOffset} tabular-nums">${displayValue}</div>`;
+                    rowHtml += `<div>${displayValue}</div>`;
                     
                     if (value !== null && value !== undefined) {
                         dayTotal += value;
@@ -3529,9 +3491,9 @@
 
                 // 3. 日总电能列
                 const totalValue = row.total !== undefined ? row.total : dayTotal;
-                const totalTextClass = isSummary ? (isCumulative ? 'text-indigo-700' : 'text-indigo-600') : 'text-indigo-600';
-                rowHtml += `<div class="${rowBgClass} ${borderClass} ${summaryShadow} px-3 py-4 text-right text-xs font-black ${totalTextClass} ${zIndexRow} ${stickyRowClass} ${stickyRowOffset} tabular-nums pr-6">${totalValue.toFixed(2)}</div>`;
+                rowHtml += `<div>${totalValue.toFixed(2)}</div>`;
                 
+                rowHtml += `</div>`;
                 return rowHtml;
             };
 
@@ -3578,7 +3540,7 @@
                 }
 
                 // 显示省略行
-                tableHtml += `<div class="bg-slate-100 border-b border-slate-200 px-4 py-3 text-left text-xs font-extrabold text-slate-500 sticky left-0 z-10" style="grid-column: 1 / -1;">... 省略 ${totalRows - headLimit - tailLimit} 行数据 ...</div>`;
+                tableHtml += `<div class="minimal-table-ellipsis">... 省略 ${totalRows - headLimit - tailLimit} 行数据 ...</div>`;
 
                 // 显示后25行
                 for (let i = totalRows - tailLimit; i < totalRows; i++) {
@@ -3591,10 +3553,13 @@
                 }
             }
 
-            // 添加汇总和平均行
-            tableHtml += renderRow(sumRow, -1, totalRows, true);
-            tableHtml += renderRow(avgRow, -2, totalRows + 1, true);
+            // 汇总和平均行数据已计算（sumRow, avgRow），可用于后续AI分析
+            // 如需显示汇总行，取消下面两行的注释：
+            // tableHtml += renderRow(sumRow, -1, totalRows, true);
+            // tableHtml += renderRow(avgRow, -2, totalRows + 1, true);
 
+            tableHtml += `</div>`;
+            tableHtml += `</div>`;
             tableHtml += `</div>`;
             return tableHtml;
          }
@@ -5815,23 +5780,34 @@ async function distributeStagnantEnergy() {
                 
                 // 如果是汇总模式...
                 if (appData.visualization.summaryMode) {
-                // ... (汇总模式逻辑保持不变，后续需要确保它使用正向数据)
-                // 获取选中的日期范围
-                const dates = appData.processedData.map(d => d.date).sort();
+                    console.log('汇总模式已启用，处理数据...');
+                    console.log('processedData 长度:', appData.processedData?.length);
+                    console.log('timeGrain:', timeGrain);
+                    console.log('startHour:', startHour, 'endHour:', endHour);
+
+                    // ... (汇总模式逻辑保持不变，后续需要确保它使用正向数据)
+                    // 获取选中的日期范围
+                    const dates = appData.processedData.map(d => d.date).sort();
                 
                 if (dates.length > 0) {
                     // 计算每一天的总负荷和最大负荷
                     const days = appData.processedData.map(d => {
                         // 使用正向数据
-                        const total = d.hourlyData.filter(v => v !== null).reduce((a, b) => a + b, 0);
-                        const max = Math.max(...d.hourlyData.filter(v => v !== null));
-                        const min = Math.min(...d.hourlyData.filter(v => v !== null && v > 0)); // 最小正向负荷
-                        return { ...d, total, max, min: min === Infinity ? 0 : min };
+                        const validData = d.hourlyData.filter(v => v !== null && !isNaN(v));
+                        const total = validData.reduce((a, b) => a + b, 0);
+                        const max = validData.length > 0 ? Math.max(...validData) : 0;
+                        const min = validData.length > 0 ? Math.min(...validData.filter(v => v > 0)) : 0; // 最小正向负荷
+                        return { ...d, total, max, min: min === Infinity || min === -Infinity ? 0 : min };
                     });
                     
-                    // 找出最高和最低用电日
+                    // 找出最高和最低用电日（最低用电日排除全天为0的数据）
                     const maxDay = days.reduce((prev, current) => (prev.total > current.total) ? prev : current);
-                    const minDay = days.reduce((prev, current) => (prev.total < current.total && prev.total > 0) ? prev : current);
+                    const minDay = days.reduce((prev, current) => {
+                        // 排除全天为0的数据
+                        if (current.total <= 0) return prev;
+                        if (prev.total <= 0) return current;
+                        return (prev.total < current.total) ? prev : current;
+                    });
                     
                     // 在15分钟模式下，获取15分钟数据用于汇总曲线
                     const get15MinDataForDay = (dayData) => {
@@ -5877,19 +5853,25 @@ async function distributeStagnantEnergy() {
                     // 提取曲线数据
                     let maxDaySeries, minDaySeries;
                     if (timeGrain === '15min') {
-                        maxDaySeries = get15MinDataForDay(maxDay);
-                        minDaySeries = get15MinDataForDay(minDay);
+                        maxDaySeries = get15MinDataForDay(maxDay) || [];
+                        minDaySeries = get15MinDataForDay(minDay) || [];
                     } else {
-                        const sliceData = (arr) => arr.slice(startHour, endHour + 1);
+                        const sliceData = (arr) => arr ? arr.slice(startHour, endHour + 1) : [];
                         maxDaySeries = sliceData(maxDay.hourlyData);
                         minDaySeries = sliceData(minDay.hourlyData);
                     }
                     
                     // 辅助函数：创建数据集（优化版）
                     const makeDataset = (label, data, color, borderDash = [], isSummary = false, isHighlight = false) => {
+                        // 数据验证
+                        if (!data || !Array.isArray(data)) {
+                            console.warn(`数据集 "${label}" 的数据无效:`, data);
+                            data = [];
+                        }
+
                         const curveCount = appData.processedData.length;
                         let width = 2;
-                        
+
                         if (isSummary) {
                             // 汇总曲线：关键曲线更粗，辅助曲线适中
                             width = isHighlight ? 2.5 : 1.8;
@@ -5912,7 +5894,7 @@ async function distributeStagnantEnergy() {
                         }
 
                         const pointRadius = showPoints ? (isSummary ? (isHighlight ? 4 : 2) : (curveCount > 30 ? 1 : 2)) : 0;
-                        
+
                         return {
                             label,
                             data,
@@ -5979,15 +5961,21 @@ async function distributeStagnantEnergy() {
                     // 3. 月平均 (month)
                     if (subMode === 'all' || subMode === 'month') {
                         for (let m = 1; m <= 12; m++) {
-                            if (monthSeries[m - 1].some(v => v !== null)) {
+                            const monthData = monthSeries[m - 1];
+                            if (monthData && monthData.some(v => v !== null)) {
                                 datasets.push(
-                                    makeDataset(`${m}月平均`, monthSeries[m - 1], monthColors[m - 1], [3, 3], true, false)
+                                    makeDataset(`${m}月平均`, monthData, monthColors[m - 1], [3, 3], true, false)
                                 );
                             }
                         }
                     }
                 }
-                
+
+                // 确保汇总模式下至少有一些数据集
+                if (datasets.length === 0) {
+                    console.warn('汇总模式下没有生成任何数据集');
+                }
+
             } else {
                 // 明细模式：绘制所选日期的曲线
                 let selectedDates = appData.visualization.selectedDates || [];
@@ -6133,7 +6121,15 @@ async function distributeStagnantEnergy() {
             updateStepStatus(3, true);
         } catch (error) {
             console.error('图表更新失败:', error);
-            showNotification('更新失败', '图表渲染过程中出现错误', 'error');
+            console.error('错误堆栈:', error.stack);
+            console.error('当前状态:', {
+                summaryMode: appData.visualization.summaryMode,
+                summarySubMode: appData.visualization.summarySubMode,
+                datasetsCount: appData.chart?.data?.datasets?.length,
+                labelsCount: appData.chart?.data?.labels?.length,
+                processedDataLength: appData.processedData?.length
+            });
+            showNotification('更新失败', '图表渲染过程中出现错误: ' + error.message, 'error');
         } finally {
             // 确保加载状态最终被隐藏
             if (chartLoadingElement) {
@@ -6620,12 +6616,13 @@ async function distributeStagnantEnergy() {
             if (dayMap.size === 0) return [];
             const days = Array.from(dayMap.values());
 
-            // 最高/最低用电日（以当天24小时总量为判定）
+            // 最高/最低用电日（以当天24小时总量为判定，最低用电日排除全天为0的数据）
             let maxDay = days[0];
             let minDay = days[0];
             for (const d of days) {
                 if (d.dailyTotal > maxDay.dailyTotal) maxDay = d;
-                if (d.dailyTotal < minDay.dailyTotal) minDay = d;
+                // 排除全天为0的数据
+                if (d.dailyTotal > 0 && d.dailyTotal < minDay.dailyTotal) minDay = d;
             }
             const maxDaySeries = maxDay.hourly.slice(startHour, endHour + 1);
             const minDaySeries = minDay.hourly.slice(startHour, endHour + 1);
@@ -6668,6 +6665,12 @@ async function distributeStagnantEnergy() {
             const monthSeries = monthBuckets.map(list => avgSeries(list));
 
             function makeDataset(label, data, color, dash = []) {
+                // 数据验证
+                if (!data || !Array.isArray(data)) {
+                    console.warn(`数据集 "${label}" 的数据无效:`, data);
+                    data = [];
+                }
+
                 // 让汇总曲线联动样式设置：线型与数据点
                 let computedDash = [];
                 if (appData.visualization.lineStyle === 'dashed') {
@@ -6742,9 +6745,10 @@ async function distributeStagnantEnergy() {
             // 3. 月平均 (month)
             if (subMode === 'all' || subMode === 'month') {
                 for (let m = 1; m <= 12; m++) {
-                    if (monthSeries[m - 1].some(v => v !== null)) {
+                    const monthData = monthSeries[m - 1];
+                    if (monthData && monthData.some(v => v !== null)) {
                         datasets.push(
-                            makeDataset(`${m}月平均`, monthSeries[m - 1], monthColors[m - 1], [4, 2])
+                            makeDataset(`${m}月平均`, monthData, monthColors[m - 1], [4, 2])
                         );
                     }
                 }
@@ -7321,17 +7325,17 @@ async function distributeStagnantEnergy() {
                     <!-- 数据详情表格 -->
                     <div class="relative isolate overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all transform-gpu" style="-webkit-mask-image: -webkit-radial-gradient(white, black); mask-image: radial-gradient(white, black); backface-visibility: hidden;">
                         <div class="overflow-x-auto scrollbar-thin" style="max-height: 520px;">
-                            <table class="w-full border-collapse">
+                            <table class="w-full border-collapse table-fixed">
                                 <thead class="sticky top-0 z-30">
                                     <tr class="bg-slate-50/95 backdrop-blur-md">
-                                        <th class="border-b border-slate-200 px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 pl-6">日期</th>
-                                        ${showMeteringPointColumn ? `<th class="border-b border-slate-200 px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">计量点</th>` : ''}
-                                        <th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">时段用电 (kWh)</th>
-                                        ${hasGenerationData ? `<th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-emerald-600">上网电量 (kWh)</th>` : ''}
-                                        <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">占全天</th>
-                                        <th class="border-b border-slate-200 px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">占全年</th>
-                                        <th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">平均时负载</th>
-                                        <th class="border-b border-slate-200 px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500 pr-6">日总用电 (kWh)</th>
+                                        <th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[14%]">日期</th>
+                                        ${showMeteringPointColumn ? `<th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[14%]">计量点</th>` : ''}
+                                        <th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[14%]">时段用电<br><span class="text-[9px] normal-case">(kWh)</span></th>
+                                        ${hasGenerationData ? `<th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-emerald-600 w-[14%]">上网电量<br><span class="text-[9px] normal-case">(kWh)</span></th>` : ''}
+                                        <th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[12%]">占全天</th>
+                                        <th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[12%]">占全年</th>
+                                        <th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[14%]">平均时负载</th>
+                                        <th class="border-b border-slate-200 px-2 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[14%]">日总用电<br><span class="text-[9px] normal-case">(kWh)</span></th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
@@ -7360,16 +7364,16 @@ async function distributeStagnantEnergy() {
 
                     html += `
                         <tr class="group transition-colors hover:bg-slate-50/80">
-                            <td class="px-4 py-4 text-left text-xs font-bold text-slate-600 sticky left-0 z-10 bg-inherit group-hover:bg-slate-50/80 pl-6 border-r border-slate-100/50">${row.date}</td>
-                            ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] font-medium text-slate-400 border-r border-slate-100/50">${row.meteringPoint}</td>` : ''}
-                            <td class="px-4 py-4 text-right text-xs font-black text-slate-900 tabular-nums">${formatNum(row.periodTotal)}</td>
-                            ${hasGenerationData ? `<td class="px-4 py-4 text-right text-xs font-bold text-emerald-600 bg-emerald-50/20 tabular-nums">${row.periodGeneration > 0 ? formatNum(row.periodGeneration) : '-'}</td>` : ''}
-                            <td class="px-4 py-4 text-center">
+                            <td class="px-2 py-3 text-center text-xs font-semibold text-slate-600 border-r border-slate-100/50">${row.date}</td>
+                            ${showMeteringPointColumn ? `<td class="px-2 py-3 text-center text-xs font-medium text-slate-400 border-r border-slate-100/50">${row.meteringPoint}</td>` : ''}
+                            <td class="px-2 py-3 text-center text-xs font-bold text-slate-900 tabular-nums">${formatNum(row.periodTotal)}</td>
+                            ${hasGenerationData ? `<td class="px-2 py-3 text-center text-xs font-semibold text-emerald-600 bg-emerald-50/20 tabular-nums">${row.periodGeneration > 0 ? formatNum(row.periodGeneration) : '-'}</td>` : ''}
+                            <td class="px-2 py-3 text-center">
                                 <span class="text-xs ${getPctColor(row.dailyPercentage)} tabular-nums">${formatPct(row.dailyPercentage)}</span>
                             </td>
-                            <td class="px-4 py-4 text-center text-[10px] ${getPctColor(yearlyPercentage)} tabular-nums">${formatPct(yearlyPercentage)}</td>
-                            <td class="px-4 py-4 text-right text-xs font-medium text-slate-500 tabular-nums">${formatNum(row.hourlyAverage)}</td>
-                            <td class="px-4 py-4 text-right text-xs font-bold text-slate-700 bg-slate-50/30 pr-6 tabular-nums">${formatNum(row.dailyTotal)}</td>
+                            <td class="px-2 py-3 text-center text-xs ${getPctColor(yearlyPercentage)} tabular-nums">${formatPct(yearlyPercentage)}</td>
+                            <td class="px-2 py-3 text-center text-xs font-medium text-slate-500 tabular-nums">${formatNum(row.hourlyAverage)}</td>
+                            <td class="px-2 py-3 text-center text-xs font-semibold text-slate-700 bg-slate-50/30 tabular-nums">${formatNum(row.dailyTotal)}</td>
                         </tr>
                     `;
                 });
@@ -7391,31 +7395,41 @@ async function distributeStagnantEnergy() {
                     hourlyAverage: avgHourlyInPeriod
                 };
 
-                // 添加汇总行
+                // 添加平均行（先显示平均）
                 html += `
-                    <tr class="bg-indigo-50 font-bold sticky bottom-[48px] z-40 border-t-2 border-indigo-200 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)]">
-                        <td class="px-4 py-4 text-left text-xs text-indigo-900 font-black sticky left-0 z-50 bg-inherit pl-6 border-r border-indigo-100/50">累计汇总</td>
-                        ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] text-slate-400 font-bold border-r border-indigo-100/50">-</td>` : ''}
-                        <td class="px-4 py-4 text-right text-sm text-indigo-700 font-black tabular-nums">${formatNum(statsSummary.totalPeriod)}</td>
-                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-700 bg-[#ecfdf5] tabular-nums">${formatNum(statsSummary.totalGeneration)}</td>` : ''}
-                        <td class="px-4 py-4 text-center text-xs text-indigo-900 font-black tabular-nums">${formatPct(overallPeriodPercentage)}</td>
-                        <td class="px-4 py-4 text-center text-[10px] text-slate-400 font-black tabular-nums">100.0%</td>
-                        <td class="px-4 py-4 text-right text-xs text-slate-700 font-bold tabular-nums">-</td>
-                        <td class="px-4 py-4 text-right text-sm font-black text-indigo-900 bg-[#eef2ff] pr-6 tabular-nums">${formatNum(statsSummary.totalDaily)}</td>
+                    <tr class="bg-slate-50/80 font-bold sticky bottom-[42px] z-40 border-t border-slate-300 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]">
+                        <td class="px-2 py-3 text-center text-xs text-slate-700 font-bold border-r border-slate-200/60 bg-slate-100/50">
+                            <span class="inline-flex items-center justify-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-slate-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+                                平均数值
+                            </span>
+                        </td>
+                        ${showMeteringPointColumn ? `<td class="px-2 py-3 text-center text-xs text-slate-400 font-semibold border-r border-slate-200/30">-</td>` : ''}
+                        <td class="px-2 py-3 text-center text-xs text-indigo-600 font-bold tabular-nums">${formatNum(statsAvg.periodTotal)}</td>
+                        ${hasGenerationData ? `<td class="px-2 py-3 text-center text-xs font-bold text-emerald-600 bg-emerald-50/30 tabular-nums">${formatNum(statsAvg.periodGeneration)}</td>` : ''}
+                        <td class="px-2 py-3 text-center text-xs text-slate-700 font-bold tabular-nums">${formatPct(statsAvg.dailyPercentage)}</td>
+                        <td class="px-2 py-3 text-center text-xs text-slate-500 font-semibold tabular-nums">${formatPct(statsAvg.yearlyPercentage)}</td>
+                        <td class="px-2 py-3 text-center text-xs text-slate-600 font-bold tabular-nums">${formatNum(statsAvg.hourlyAverage)}</td>
+                        <td class="px-2 py-3 text-center text-xs font-bold text-slate-700 bg-slate-100/30 tabular-nums">${formatNum(statsAvg.dailyTotal)}</td>
                     </tr>
                 `;
 
-                // 添加平均行
+                // 添加汇总行（后显示汇总）
                 html += `
-                    <tr class="bg-white font-bold sticky bottom-0 z-40 border-t border-slate-200 shadow-[0_-2px_15px_rgba(0,0,0,0.05)]">
-                        <td class="px-4 py-4 text-left text-xs text-slate-600 font-black sticky left-0 z-50 bg-inherit pl-6 border-r border-slate-100/50">平均数值</td>
-                        ${showMeteringPointColumn ? `<td class="px-4 py-4 text-left text-[10px] text-slate-400 font-bold border-r border-slate-100/50">-</td>` : ''}
-                        <td class="px-4 py-4 text-right text-sm text-indigo-600 font-black tabular-nums">${formatNum(statsAvg.periodTotal)}</td>
-                        ${hasGenerationData ? `<td class="px-4 py-4 text-right text-sm font-black text-emerald-600 bg-[#f0fdf4] tabular-nums">${formatNum(statsAvg.periodGeneration)}</td>` : ''}
-                        <td class="px-4 py-4 text-center text-xs text-slate-700 font-black tabular-nums">${formatPct(statsAvg.dailyPercentage)}</td>
-                        <td class="px-4 py-4 text-center text-[10px] text-slate-400 font-black tabular-nums">${formatPct(statsAvg.yearlyPercentage)}</td>
-                        <td class="px-4 py-4 text-right text-xs text-slate-600 font-black tabular-nums">${formatNum(statsAvg.hourlyAverage)}</td>
-                        <td class="px-4 py-4 text-right text-sm font-black text-slate-700 bg-[#f8fafc] pr-6 tabular-nums">${formatNum(statsAvg.dailyTotal)}</td>
+                    <tr class="bg-gradient-to-r from-indigo-50 to-blue-50 font-bold sticky bottom-0 z-40 border-t-2 border-indigo-300 shadow-[0_-4px_12px_-2px_rgba(79,70,229,0.1)]">
+                        <td class="px-2 py-3 text-center text-xs text-indigo-800 font-bold border-r border-indigo-200/60 bg-indigo-100/50">
+                            <span class="inline-flex items-center justify-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                                累计汇总
+                            </span>
+                        </td>
+                        ${showMeteringPointColumn ? `<td class="px-2 py-3 text-center text-xs text-slate-500 font-semibold border-r border-indigo-200/30">-</td>` : ''}
+                        <td class="px-2 py-3 text-center text-xs text-indigo-700 font-bold tabular-nums">${formatNum(statsSummary.totalPeriod)}</td>
+                        ${hasGenerationData ? `<td class="px-2 py-3 text-center text-xs font-bold text-emerald-700 bg-emerald-50/40 tabular-nums">${formatNum(statsSummary.totalGeneration)}</td>` : ''}
+                        <td class="px-2 py-3 text-center text-xs text-indigo-800 font-bold tabular-nums">${formatPct(overallPeriodPercentage)}</td>
+                        <td class="px-2 py-3 text-center text-xs text-slate-500 font-semibold tabular-nums">100%</td>
+                        <td class="px-2 py-3 text-center text-xs text-slate-600 font-semibold tabular-nums">-</td>
+                        <td class="px-2 py-3 text-center text-xs font-bold text-indigo-800 bg-indigo-100/30 tabular-nums">${formatNum(statsSummary.totalDaily)}</td>
                     </tr>
                 `;
 
@@ -8965,9 +8979,12 @@ async function distributeStagnantEnergy() {
             const timeLabels = buildTimeLabels(effectiveInterval);
             const includeAnomaly = !!opts.includeAnomalyMarks;
 
+            // 为时间列添加单位标识 (kW)
+            const timeLabelsWithUnit = timeLabels.map(t => `${t} (kW)`);
+
             const header = includeAnomaly
-                ? ['日期', '计量点', ...timeLabels, '日总电能 (kWh)', '缺失点数', '异常点数', '异常摘要']
-                : ['日期', '计量点', ...timeLabels, '日总电能 (kWh)'];
+                ? ['日期', '计量点', ...timeLabelsWithUnit, '日总电能 (kWh)', '缺失点数', '异常点数', '异常摘要']
+                : ['日期', '计量点', ...timeLabelsWithUnit, '日总电能 (kWh)'];
             const rows = [header];
 
             const fillMethod = appData.config.invalidDataHandling === 'ignore' ? 'ignore' : 'interpolate';
@@ -9002,7 +9019,86 @@ async function distributeStagnantEnergy() {
                 return;
             }
             setExportProgress(30, '导出中');
-            exportDataToFile(built.rows, built.baseName, { fileName: params.fileName });
+
+            // 创建包含多个工作表的Excel
+            const wb = XLSX.utils.book_new();
+
+            // 功率数据工作表（宽表）
+            const powerSheet = XLSX.utils.aoa_to_sheet(built.rows);
+            XLSX.utils.book_append_sheet(wb, powerSheet, '功率数据');
+
+            // 电能数据工作表（宽表）- 将功率转换为电能
+            const energyRows = [];
+            const header = built.rows[0].slice();
+            // 修改表头单位
+            for (let i = 2; i < header.length - 1; i++) {
+                if (header[i] && header[i].includes('(kW)')) {
+                    header[i] = header[i].replace('(kW)', '(kWh)');
+                }
+            }
+            energyRows.push(header);
+
+            // 转换数据：功率 -> 电能
+            const intervalMinutes = opts.samplingInterval === 'auto'
+                ? (appData?.config?.timeInterval || 15)
+                : (parseInt(String(opts.samplingInterval), 10) || 15);
+            const hoursMultiplier = intervalMinutes / 60; // 15分钟 = 0.25小时
+
+            for (let i = 1; i < built.rows.length; i++) {
+                const row = built.rows[i].slice();
+                for (let j = 2; j < row.length - 1; j++) {
+                    if (row[j] !== null && row[j] !== undefined && row[j] !== '' && !isNaN(row[j])) {
+                        row[j] = row[j] * hoursMultiplier;
+                    }
+                }
+                energyRows.push(row);
+            }
+
+            const energySheet = XLSX.utils.aoa_to_sheet(energyRows);
+            XLSX.utils.book_append_sheet(wb, energySheet, '电能数据');
+
+            // 计算时间列数量（排除日期、计量点、日总电能等非时间列）
+            const timeColCount = intervalMinutes <= 15 ? 96 : (intervalMinutes <= 30 ? 48 : 24);
+            const timeColStart = 2; // 从第3列开始（跳过日期、计量点）
+            const timeColEnd = timeColStart + timeColCount; // 时间列结束位置
+
+            // 功率一维表格（长表）- 日期时间列 + 功率值列
+            const powerLongRows = [['日期时间', '功率(kW)']];
+            for (let i = 1; i < built.rows.length; i++) {
+                const date = built.rows[i][0];
+                const timeHeaders = built.rows[0];
+                for (let j = timeColStart; j < timeColEnd; j++) {
+                    const timeLabel = timeHeaders[j] ? timeHeaders[j].replace(' (kW)', '') : '';
+                    const value = built.rows[i][j];
+                    if (value !== null && value !== undefined && value !== '' && !isNaN(value)) {
+                        powerLongRows.push([`${date} ${timeLabel}`, value]);
+                    }
+                }
+            }
+            const powerLongSheet = XLSX.utils.aoa_to_sheet(powerLongRows);
+            XLSX.utils.book_append_sheet(wb, powerLongSheet, '功率一维表');
+
+            // 电能一维表格（长表）- 日期时间列 + 电能值列
+            const energyLongRows = [['日期时间', '电能(kWh)']];
+            for (let i = 1; i < energyRows.length; i++) {
+                const date = energyRows[i][0];
+                const timeHeaders = energyRows[0];
+                for (let j = timeColStart; j < timeColEnd; j++) {
+                    const timeLabel = timeHeaders[j] ? timeHeaders[j].replace(' (kWh)', '') : '';
+                    const value = energyRows[i][j];
+                    if (value !== null && value !== undefined && value !== '' && !isNaN(value)) {
+                        energyLongRows.push([`${date} ${timeLabel}`, value]);
+                    }
+                }
+            }
+            const energyLongSheet = XLSX.utils.aoa_to_sheet(energyLongRows);
+            XLSX.utils.book_append_sheet(wb, energyLongSheet, '电能一维表');
+
+            // 导出文件
+            const fileName = params.fileName || getExportFileName(built.baseName, 'xlsx');
+            XLSX.writeFile(wb, fileName);
+            updateExportStatus('15分钟数据已导出', fileName);
+            showNotification('成功', '已导出包含功率/电能宽表和一维表的Excel', 'success');
         }
 
         // 构建15分钟数据行（仅包含有效数据的时刻）
@@ -9122,9 +9218,11 @@ async function distributeStagnantEnergy() {
             }
 
             const includeAnomaly = !!opts.includeAnomalyMarks;
+            // 为时间列添加单位标识 (kW)
+            const hourlyLabelsWithUnit = Array.from({ length: 24 }, (_, h) => `${h}:00 (kW)`);
             const header = includeAnomaly
-                ? ['日期', ...Array.from({ length: 24 }, (_, h) => `${h}:00`), '日总电能 (kWh)', '缺失点数', '异常点数', '异常摘要']
-                : ['日期', ...Array.from({ length: 24 }, (_, h) => `${h}:00`), '日总电能 (kWh)'];
+                ? ['日期', ...hourlyLabelsWithUnit, '日总电能 (kWh)', '缺失点数', '异常点数', '异常摘要']
+                : ['日期', ...hourlyLabelsWithUnit, '日总电能 (kWh)'];
             const rows = [header];
 
             const hourLabels = Array.from({ length: 24 }, (_, h) => `${h}:00`);
@@ -9154,7 +9252,81 @@ async function distributeStagnantEnergy() {
                 return;
             }
             setExportProgress(30, '导出中');
-            exportDataToFile(built.rows, built.baseName, { fileName: params.fileName });
+
+            // 创建包含多个工作表的Excel
+            const wb = XLSX.utils.book_new();
+
+            // 功率数据工作表（宽表）
+            const powerSheet = XLSX.utils.aoa_to_sheet(built.rows);
+            XLSX.utils.book_append_sheet(wb, powerSheet, '功率数据');
+
+            // 电能数据工作表（宽表）- 将功率转换为电能
+            const energyRows = [];
+            const header = built.rows[0].slice();
+            // 修改表头单位
+            for (let i = 1; i < header.length - 1; i++) {
+                if (header[i] && header[i].includes('(kW)')) {
+                    header[i] = header[i].replace('(kW)', '(kWh)');
+                }
+            }
+            energyRows.push(header);
+
+            // 转换数据：功率 -> 电能（1小时数据，乘以1）
+            for (let i = 1; i < built.rows.length; i++) {
+                const row = built.rows[i].slice();
+                for (let j = 1; j < row.length - 1; j++) {
+                    if (row[j] !== null && row[j] !== undefined && row[j] !== '' && !isNaN(row[j])) {
+                        // 1小时功率直接等于电能值
+                        // row[j] = row[j] * 1; // 不需要乘，1小时功率(kW) = 1小时电能
+                    }
+                }
+                energyRows.push(row);
+            }
+
+            const energySheet = XLSX.utils.aoa_to_sheet(energyRows);
+            XLSX.utils.book_append_sheet(wb, energySheet, '电能数据');
+
+            // 24小时数据：时间列从第2列开始（索引1），共24列
+            const timeColStart24h = 1; // 从第2列开始（跳过日期）
+            const timeColEnd24h = timeColStart24h + 24; // 时间列结束位置
+
+            // 功率一维表格（长表）- 日期时间列 + 功率值列
+            const powerLongRows = [['日期时间', '功率(kW)']];
+            for (let i = 1; i < built.rows.length; i++) {
+                const date = built.rows[i][0];
+                const timeHeaders = built.rows[0];
+                for (let j = timeColStart24h; j < timeColEnd24h; j++) {
+                    const timeLabel = timeHeaders[j] ? timeHeaders[j].replace(' (kW)', '') : '';
+                    const value = built.rows[i][j];
+                    if (value !== null && value !== undefined && value !== '' && !isNaN(value)) {
+                        powerLongRows.push([`${date} ${timeLabel}`, value]);
+                    }
+                }
+            }
+            const powerLongSheet = XLSX.utils.aoa_to_sheet(powerLongRows);
+            XLSX.utils.book_append_sheet(wb, powerLongSheet, '功率一维表');
+
+            // 电能一维表格（长表）- 日期时间列 + 电能值列
+            const energyLongRows = [['日期时间', '电能(kWh)']];
+            for (let i = 1; i < energyRows.length; i++) {
+                const date = energyRows[i][0];
+                const timeHeaders = energyRows[0];
+                for (let j = timeColStart24h; j < timeColEnd24h; j++) {
+                    const timeLabel = timeHeaders[j] ? timeHeaders[j].replace(' (kWh)', '') : '';
+                    const value = energyRows[i][j];
+                    if (value !== null && value !== undefined && value !== '' && !isNaN(value)) {
+                        energyLongRows.push([`${date} ${timeLabel}`, value]);
+                    }
+                }
+            }
+            const energyLongSheet = XLSX.utils.aoa_to_sheet(energyLongRows);
+            XLSX.utils.book_append_sheet(wb, energyLongSheet, '电能一维表');
+
+            // 导出文件
+            const fileName = params.fileName || getExportFileName(built.baseName, 'xlsx');
+            XLSX.writeFile(wb, fileName);
+            updateExportStatus('24小时数据已导出', fileName);
+            showNotification('成功', '已导出包含功率/电能宽表和一维表的Excel', 'success');
         }
 
         function buildDailyStatsRows(params = {}) {
@@ -9398,9 +9570,10 @@ async function distributeStagnantEnergy() {
             csvContent += '# 说明: 按月份从低到高排列，去除年份影响\n';
             csvContent += '# 规则: 按月份和日匹配，缺失数据用最近有效数据补全\n';
             csvContent += '# 格式: DD/MM/YY hh:mm，年份固定为99\n';
+            csvContent += '# 备注列说明: "实际数据"表示原始数据，"缺失后补充"表示缺失日期用其他日期数据补全\n';
             csvContent += '\n';
-            csvContent += 'Date;P Load\n';
-            csvContent += ';kW\n';
+            csvContent += 'Date;P Load;备注\n';
+            csvContent += ';kW;\n';
 
             // 按月份顺序生成8760小时数据
             let dataUsageStats = {
@@ -9430,6 +9603,7 @@ async function distributeStagnantEnergy() {
                     });
 
                     // 为每个小时生成数据行
+                    const remark = dayData.source.startsWith('实际数据') ? '' : '缺失后补充';
                     for (let hour = 0; hour < 24; hour++) {
                         const value = dayData.data[hour] || 0;
                         const dayStr = String(day).padStart(2, '0');
@@ -9437,7 +9611,7 @@ async function distributeStagnantEnergy() {
                         const hourStr = String(hour).padStart(2, '0');
                         const dateTimeStr = `${dayStr}/${monthStr}/99 ${hourStr}:00`;
                         
-                        csvContent += `${dateTimeStr};${value.toFixed(3)}\n`;
+                        csvContent += `${dateTimeStr};${value.toFixed(3)};${remark}\n`;
                     }
                 }
             }
@@ -9761,57 +9935,6 @@ async function distributeStagnantEnergy() {
                 </tr>
             `).join('');
             
-            // 获取 AI 分析内容
-            let aiAnalysisHtml = '';
-            const aiContentEl = document.getElementById('aiAnalysisContent');
-            if (aiContentEl && aiContentEl.innerText && aiContentEl.innerText.trim().length > 10) {
-                // 简单的 Markdown 转 HTML 处理
-                const rawText = aiContentEl.innerText;
-                const lines = rawText.split('\n');
-                let processedHtml = '';
-                
-                lines.forEach(line => {
-                    line = line.trim();
-                    if (!line) return;
-                    
-                    if (line.startsWith('### ')) {
-                        processedHtml += `<h4>${line.substring(4)}</h4>`;
-                    } else if (line.startsWith('## ')) {
-                        processedHtml += `<h3>${line.substring(3)}</h3>`;
-                    } else if (line.startsWith('**') && line.endsWith('**')) {
-                        processedHtml += `<p><strong>${line.substring(2, line.length-2)}</strong></p>`;
-                    } else if (line.startsWith('- ')) {
-                        processedHtml += `<li>${line.substring(2)}</li>`;
-                    } else if (/^\d+\./.test(line)) {
-                        processedHtml += `<p class="list-item"><strong>${line}</strong></p>`;
-                    } else {
-                        // 处理行内加粗
-                        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                        processedHtml += `<p>${line}</p>`;
-                    }
-                });
-                
-                // 包装列表
-                processedHtml = processedHtml.replace(/<li>/g, '<ul style="margin:8px 0;padding-left:20px;"><li>').replace(/<\/li>(?!<ul)/g, '</li></ul>');
-                // 修复连续列表的标签
-                processedHtml = processedHtml.replace(/<\/ul><ul[^>]*>/g, '');
-                
-                aiAnalysisHtml = `
-                <div class="page">
-                    <h2>🤖 AI 智能分析报告</h2>
-                    <div class="highlight-box" style="background:linear-gradient(135deg, #eef2ff 0%, #fff 100%);border-color:#c7d2fe;">
-                        <div style="font-size:14px;color:#312e81;line-height:1.8;">
-                            ${processedHtml}
-                        </div>
-                    </div>
-                    <div class="footer">
-                        <p>本报告由 24小时负荷曲线生成工具 自动生成</p>
-                    </div>
-                    <div class="page-number">- 附录：AI 分析 -</div>
-                </div>
-                `;
-            }
-            
             setExportProgress(70, '导出中');
             
             // CSS样式
@@ -9980,8 +10103,6 @@ async function distributeStagnantEnergy() {
                         <div class="page-number">- 第 1 页 -</div>
                     </div>
                     
-                    ${aiAnalysisHtml}
-                    
                     <!-- 第2页：24小时负荷曲线分析 -->
                     <div class="page">
                         <h2>📈 24小时负荷曲线分析</h2>
@@ -10016,87 +10137,10 @@ async function distributeStagnantEnergy() {
                         <div class="page-number">- 第 2 页 -</div>
                     </div>
                     
-                    <!-- 第3页：时段分析与优化建议 -->
-                    <div class="page">
-                        <h2>⏰ 时段分析与优化建议</h2>
-                        
-                        <div class="section" style="margin-top:0;border-top:none;">
-                            <h3>各时段用电分布</h3>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>时段</th>
-                                        <th style="text-align:center;">时间范围</th>
-                                        <th style="text-align:right;">平均负荷</th>
-                                        <th style="text-align:right;">用电量占比</th>
-                                        <th style="text-align:center;">负荷等级</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${timeTableHtml}</tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="section">
-                            <h3>优化建议</h3>
-                            
-                            <div class="suggestion-card">
-                                <div class="suggestion-icon green">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                                </div>
-                                <div class="suggestion-content">
-                                    <div class="suggestion-title green">错峰用电建议</div>
-                                    <div class="suggestion-text">${suggestion1}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="suggestion-card">
-                                <div class="suggestion-icon blue">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 7v10M18 7v10"/></svg>
-                                </div>
-                                <div class="suggestion-content">
-                                    <div class="suggestion-title blue">负荷平衡建议</div>
-                                    <div class="suggestion-text">${suggestion2}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="suggestion-card">
-                                <div class="suggestion-icon amber">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                                </div>
-                                <div class="suggestion-content">
-                                    <div class="suggestion-title amber">新能源配置建议</div>
-                                    <div class="suggestion-text">${suggestion3}</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="footer">
-                            <p>本报告由 24小时负荷曲线生成工具 自动生成</p>
-                        </div>
-                        <div class="page-number">- 第 3 页 -</div>
-                    </div>
-                    
-                    <!-- 第4页：详细数据汇总 -->
+                    <!-- 第3页：详细数据汇总 -->
                     <div class="page">
                         <h2>📋 详细数据汇总</h2>
-                        
-                        <div class="section" style="margin-top:0;border-top:none;">
-                            <h3>月度用电汇总</h3>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>月份</th>
-                                        <th style="text-align:right;">总用电量(kWh)</th>
-                                        <th style="text-align:right;">平均负荷(kW)</th>
-                                        <th style="text-align:right;">最大负荷(kW)</th>
-                                        <th style="text-align:right;">最小负荷(kW)</th>
-                                        <th style="text-align:right;">负荷率(%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${monthlyTableHtml}</tbody>
-                            </table>
-                        </div>
-                        
+
                         <div class="two-col" style="margin-top:24px;">
                             <div class="card" style="border-left:4px solid #ef4444;">
                                 <h3 style="color:#ef4444;">🔺 用电高峰日 TOP 5</h3>
@@ -10135,7 +10179,7 @@ async function distributeStagnantEnergy() {
                             <p>本报告由 24小时负荷曲线生成工具 自动生成</p>
                             <p>生成时间：${reportDate}</p>
                         </div>
-                        <div class="page-number">- 第 4 页 -</div>
+                        <div class="page-number">- 第 3 页 -</div>
                     </div>
                     
                     <div class="no-print" style="position:fixed;bottom:20px;right:20px;display:flex;gap:12px;">
@@ -10169,39 +10213,128 @@ async function distributeStagnantEnergy() {
         function generatePDFAnalysisText(data, summary) {
             const findings = [];
             const suggestions = [];
-            
-            // 基于数据生成发现
-            if (summary.maxTotal && summary.minTotal) {
+
+            if (!data || data.length === 0 || !summary) {
+                return {
+                    overview: '无有效数据',
+                    findings: ['请先导入数据'],
+                    suggestions: [],
+                    peakHours: '--',
+                    valleyHours: '--'
+                };
+            }
+
+            // 计算实际的峰谷时段
+            const hourlySums = new Array(24).fill(0);
+            const hourlyCounts = new Array(24).fill(0);
+            data.forEach(d => {
+                if (d.hourlyData) {
+                    d.hourlyData.forEach((v, h) => {
+                        if (v !== null && v !== undefined && v > 0) {
+                            hourlySums[h] += v;
+                            hourlyCounts[h]++;
+                        }
+                    });
+                }
+            });
+
+            const hourlyAvgs = hourlySums.map((s, i) => hourlyCounts[i] > 0 ? s / hourlyCounts[i] : 0);
+            const overallAvg = hourlyAvgs.reduce((a, b) => a + b, 0) / 24 || 0;
+
+            // 找出实际峰谷时段
+            const peakHours = [];
+            const valleyHours = [];
+            hourlyAvgs.forEach((avg, h) => {
+                if (overallAvg > 0) {
+                    if (avg > overallAvg * 1.2) peakHours.push(`${h.toString().padStart(2, '0')}:00`);
+                    if (avg < overallAvg * 0.5) valleyHours.push(`${h.toString().padStart(2, '0')}:00`);
+                }
+            });
+
+            // 简化峰谷时段显示
+            const formatHours = (arr) => {
+                if (arr.length === 0) return '无明显特征';
+                if (arr.length <= 3) return arr.join(', ');
+                return `${arr[0]}~${arr[arr.length-1]} (${arr.length}小时)`;
+            };
+
+            const peakHoursStr = formatHours(peakHours);
+            const valleyHoursStr = formatHours(valleyHours);
+
+            // 基于实际数据生成分析
+            const fmt = (n) => typeof n === 'number' ? n.toFixed(2) : '—';
+
+            // 1. 日用电量波动分析
+            if (summary.maxTotal && summary.minTotal && summary.minTotal > 0) {
                 const ratio = summary.maxTotal / summary.minTotal;
-                if (ratio > 3) {
-                    findings.push(`负荷波动较大，最大日用电量是最小日的 ${ratio.toFixed(1)} 倍，建议关注用电稳定性`);
-                } else if (ratio < 1.5) {
-                    findings.push(`负荷较为平稳，日用电量波动控制在 ${ratio.toFixed(1)} 倍以内`);
+                if (ratio > 5) {
+                    findings.push(`日用电量波动剧烈，最高日 (${summary.maxDay}) 是最低日 (${summary.minDay}) 的 ${ratio.toFixed(1)} 倍，需重点关注异常用电日`);
+                } else if (ratio > 2) {
+                    findings.push(`日用电量波动较大 (${ratio.toFixed(1)} 倍)，建议排查最高日用电量突增原因`);
+                } else {
+                    findings.push(`日用电量相对平稳，波动幅度 ${ratio.toFixed(1)} 倍，处于正常范围`);
                 }
             }
-            
-            if (summary.totalEnergy) {
-                const avgDaily = summary.totalEnergy / (data.length || 1);
-                findings.push(`平均日用电量为 ${avgDaily.toFixed(2)} kWh`);
+
+            // 2. 平均负荷分析
+            if (summary.avgLoad) {
+                findings.push(`分析时段内平均负荷为 ${fmt(summary.avgLoad)} kWh/h`);
             }
-            
-            // 生成建议
-            suggestions.push('建议定期监控负荷曲线，及时发现异常用电模式');
-            suggestions.push('可考虑实施峰谷电价策略，降低用电成本');
-            
+
+            // 3. 峰谷特征分析
+            if (peakHours.length > 0 && valleyHours.length > 0) {
+                findings.push(`用电高峰时段: ${peakHoursStr}；低谷时段: ${valleyHoursStr}`);
+            }
+
+            // 4. 负荷率分析
             if (summary.avgLoad && summary.maxTotal) {
-                const loadFactor = (summary.avgLoad * 24 / summary.maxTotal);
-                if (loadFactor < 0.6) {
-                    suggestions.push('负荷率偏低，建议优化设备运行时段，提高用电效率');
+                const loadFactor = summary.avgLoad * 24 / (summary.maxTotal || 1);
+                if (loadFactor > 0.7) {
+                    findings.push(`负荷率 ${(loadFactor*100).toFixed(1)}%，用电效率较高，设备利用率良好`);
+                } else if (loadFactor > 0.5) {
+                    findings.push(`负荷率 ${(loadFactor*100).toFixed(1)}%，处于中等水平，有优化空间`);
+                } else {
+                    findings.push(`负荷率仅 ${(loadFactor*100).toFixed(1)}%，存在较大节能空间，建议优化设备运行时段`);
                 }
             }
-            
+
+            // 5. 发电特征（如有）
+            if (summary.hasNegativeValues && summary.totalNegativeEnergy > 0) {
+                const genRatio = (summary.totalNegativeEnergy / summary.totalEnergy * 100).toFixed(1);
+                findings.push(`存在反向发电数据，累计上网电量 ${fmt(summary.totalNegativeEnergy)} kWh，占总用电量 ${genRatio}%`);
+            }
+
+            // 生成具体建议
+            if (peakHours.length > 0) {
+                suggestions.push(`建议关注 ${peakHoursStr} 高峰时段用电，可考虑错峰运行降低需量电费`);
+            }
+
+            if (valleyHours.length > 0) {
+                suggestions.push(`低谷时段 (${valleyHoursStr}) 电价较低，可将大功率设备安排在此时间段运行`);
+            }
+
+            if (summary.maxTotal && summary.avgLoad) {
+                const loadFactor = summary.avgLoad * 24 / summary.maxTotal;
+                if (loadFactor < 0.5) {
+                    suggestions.push(`负荷率偏低，建议配置储能设备或调整生产计划，提高设备利用率`);
+                }
+            }
+
+            if (summary.hasNegativeValues) {
+                suggestions.push(`建议进一步分析光伏/储能发电时段，优化自发自用比例`);
+            }
+
+            suggestions.push(`建立日负荷曲线档案，持续跟踪用电规律，及时发现异常`);
+
+            // 生成概览
+            const overview = `本报告基于 ${data.length} 天的负荷数据分析，总用电量 ${fmt(summary.totalEnergy)} kWh，平均日用电量 ${fmt(summary.totalEnergy / data.length)} kWh。${findings.length > 0 ? findings[0] : '用电整体平稳'}。`;
+
             return {
-                overview: `本报告分析了 ${data.length} 天的负荷数据，总用电量 ${summary.totalEnergy?.toFixed(2) || '—'} kWh。数据显示${findings.length > 0 ? '存在明显的用电特征' : '整体用电平稳'}，建议根据分析结果优化用电策略。`,
+                overview,
                 findings: findings.length > 0 ? findings : ['数据正常，未发现明显异常'],
-                suggestions: suggestions,
-                peakHours: '08:00-10:00, 18:00-21:00',
-                valleyHours: '23:00-07:00'
+                suggestions: suggestions.length > 0 ? suggestions : ['保持当前用电模式'],
+                peakHours: peakHoursStr,
+                valleyHours: valleyHoursStr
             };
         }
 
@@ -10226,13 +10359,13 @@ async function distributeStagnantEnergy() {
 
         function buildFullPackageWorkbook(opts = {}) {
             const wb = XLSX.utils.book_new();
-            
+
             // 联动修复：多表导出也应遵循范围设置
             const exportAllDates = document.getElementById('exportAllDates')?.checked ?? true;
             const startDate = document.getElementById('exportStartDate')?.value || '';
             const endDate = document.getElementById('exportEndDate')?.value || '';
             const selected = Array.isArray(appData?.visualization?.selectedDates) ? appData.visualization.selectedDates : [];
-            
+
             let dataForOverview = [...appData.processedData];
             if (!exportAllDates) {
                 if (startDate && endDate) {
@@ -10250,25 +10383,383 @@ async function distributeStagnantEnergy() {
                 dataForOverview = dataForOverview.filter(d => isWeekdayDate(d.date));
             }
 
+            // 1. 概况
             const overview = XLSX.utils.aoa_to_sheet(buildOverviewRows(dataForOverview));
             XLSX.utils.book_append_sheet(wb, overview, '概况');
 
-            const d15 = build15MinRowsFiltered({ opts });
-            if (d15.rows && d15.rows.length) {
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d15.rows), '15min数据');
+            // 2. 15分钟功率数据（宽表）
+            const power15Rows = buildPowerDataRows15Min({ data: dataForOverview });
+            if (power15Rows && power15Rows.length) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(power15Rows), '15分钟功率');
             }
 
-            const d24 = buildHourlyRows({ opts });
-            if (d24.rows && d24.rows.length) {
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d24.rows), '24h汇总');
+            // 3. 15分钟电量数据（宽表）
+            const energy15Rows = buildEnergyDataRows15Min({ data: dataForOverview });
+            if (energy15Rows && energy15Rows.length) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(energy15Rows), '15分钟电量');
             }
 
+            // 4. 24小时电量数据（宽表）- 只显示电量
+            const energy24Rows = buildEnergyDataRows24H({ data: dataForOverview });
+            if (energy24Rows && energy24Rows.length) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(energy24Rows), '24小时电量');
+            }
+
+            // 5. 15分钟功率一维表（长表）
+            const power15LongRows = [['日期时间', '功率(kW)']];
+            if (power15Rows && power15Rows.length > 1) {
+                for (let i = 1; i < power15Rows.length; i++) {
+                    const date = power15Rows[i][0];
+                    const timeHeaders = power15Rows[0];
+                    for (let j = 2; j < 98 && j < power15Rows[i].length; j++) {
+                        const timeLabel = timeHeaders[j] ? timeHeaders[j].replace(' (kW)', '') : '';
+                        const value = power15Rows[i][j];
+                        if (value !== null && value !== undefined && value !== '' && !isNaN(value)) {
+                            power15LongRows.push([`${date} ${timeLabel}`, value]);
+                        }
+                    }
+                }
+            }
+            if (power15LongRows.length > 1) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(power15LongRows), '15分钟功率一维');
+            }
+
+            // 6. 15分钟电能一维表（长表）
+            const energy15LongRows = [['日期时间', '电能(kWh)']];
+            if (energy15Rows && energy15Rows.length > 1) {
+                for (let i = 1; i < energy15Rows.length; i++) {
+                    const date = energy15Rows[i][0];
+                    const timeHeaders = energy15Rows[0];
+                    for (let j = 2; j < 98 && j < energy15Rows[i].length; j++) {
+                        const timeLabel = timeHeaders[j] ? timeHeaders[j].replace(' (kWh)', '') : '';
+                        const value = energy15Rows[i][j];
+                        if (value !== null && value !== undefined && value !== '' && !isNaN(value)) {
+                            energy15LongRows.push([`${date} ${timeLabel}`, value]);
+                        }
+                    }
+                }
+            }
+            if (energy15LongRows.length > 1) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(energy15LongRows), '15分钟电能一维');
+            }
+
+            // 7. 日统计
             const ds = buildDailyStatsRows({ opts });
             if (ds.rows && ds.rows.length) {
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ds.rows), '日统计');
             }
 
             return wb;
+        }
+
+        // 构建功率数据表（原始功率数据）
+        function buildPowerDataRows({ opts = {}, data = [] }) {
+            const rows = [];
+            const timeInterval = appData?.config?.timeInterval || 60;
+            const use15Min = timeInterval <= 15;
+            const use30Min = timeInterval <= 30 && timeInterval > 15;
+            const intervals = use15Min ? 96 : (use30Min ? 48 : 24);
+
+            // 表头 - 添加单位标识 (kW)
+            const header = ['日期', '计量点'];
+            if (use15Min) {
+                for (let i = 0; i < 96; i++) {
+                    const hour = Math.floor(i / 4);
+                    const min = (i % 4) * 15;
+                    header.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} (kW)`);
+                }
+            } else if (use30Min) {
+                for (let i = 0; i < 48; i++) {
+                    const hour = Math.floor(i / 2);
+                    const min = (i % 2) * 30;
+                    header.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} (kW)`);
+                }
+            } else {
+                for (let i = 0; i < 24; i++) {
+                    header.push(`${i.toString().padStart(2, '0')}:00 (kW)`);
+                }
+            }
+            header.push('日最大值(kW)', '日最小值(kW)', '日平均值(kW)');
+            rows.push(header);
+
+            // 数据行
+            const dataToExport = data.length > 0 ? data : (appData?.processedData || []);
+            dataToExport.forEach(d => {
+                const row = [d.date, d.meteringPoint || '默认计量点'];
+                const values = [];
+
+                if (use15Min && d.hourlyData15min) {
+                    for (let i = 0; i < 96; i++) {
+                        const v = d.hourlyData15min[i];
+                        row.push(v !== null && v !== undefined ? v : '');
+                        if (v !== null && v !== undefined) values.push(v);
+                    }
+                } else if (d.hourlyData) {
+                    for (let i = 0; i < 24; i++) {
+                        const v = d.hourlyData[i];
+                        row.push(v !== null && v !== undefined ? v : '');
+                        if (v !== null && v !== undefined) values.push(v);
+                    }
+                }
+
+                // 统计值
+                if (values.length > 0) {
+                    row.push(Math.max(...values));
+                    row.push(Math.min(...values));
+                    row.push(values.reduce((a, b) => a + b, 0) / values.length);
+                } else {
+                    row.push('', '', '');
+                }
+
+                rows.push(row);
+            });
+
+            return rows;
+        }
+
+        // 构建电量数据表（累积电量数据）
+        function buildEnergyDataRows({ opts = {}, data = [] }) {
+            const rows = [];
+            const timeInterval = appData?.config?.timeInterval || 60;
+            const use15Min = timeInterval <= 15;
+            const use30Min = timeInterval <= 30 && timeInterval > 15;
+            const intervals = use15Min ? 96 : (use30Min ? 48 : 24);
+            const hoursMultiplier = timeInterval / 60; // 电能转换系数
+
+            // 表头 - 添加单位标识 (kWh)
+            const header = ['日期', '计量点'];
+            if (use15Min) {
+                for (let i = 0; i < 96; i++) {
+                    const hour = Math.floor(i / 4);
+                    const min = (i % 4) * 15;
+                    header.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} (kWh)`);
+                }
+            } else if (use30Min) {
+                for (let i = 0; i < 48; i++) {
+                    const hour = Math.floor(i / 2);
+                    const min = (i % 2) * 30;
+                    header.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} (kWh)`);
+                }
+            } else {
+                for (let i = 0; i < 24; i++) {
+                    header.push(`${i.toString().padStart(2, '0')}:00 (kWh)`);
+                }
+            }
+            header.push('日累计电量(kWh)', '时段电量(kWh)');
+            rows.push(header);
+
+            // 数据行 - 功率转换为电量
+            const dataToExport = data.length > 0 ? data : (appData?.processedData || []);
+            const startHour = Number(appData?.visualization?.focusStartTime ?? 0);
+            const endHour = Number(appData?.visualization?.focusEndTime ?? 23);
+
+            dataToExport.forEach(d => {
+                const row = [d.date, d.meteringPoint || '默认计量点'];
+                let dailyTotal = 0;
+                let periodTotal = 0;
+
+                if (use15Min && d.hourlyData15min) {
+                    for (let i = 0; i < 96; i++) {
+                        const v = d.hourlyData15min[i];
+                        const energy = v !== null && v !== undefined ? v * hoursMultiplier : '';
+                        row.push(energy);
+                        if (v !== null && v !== undefined) {
+                            dailyTotal += energy;
+                            const hour = Math.floor(i / 4);
+                            if (hour >= startHour && hour <= endHour) {
+                                periodTotal += energy;
+                            }
+                        }
+                    }
+                } else if (d.hourlyData) {
+                    for (let i = 0; i < 24; i++) {
+                        const v = d.hourlyData[i];
+                        const energy = v !== null && v !== undefined ? v * hoursMultiplier : '';
+                        row.push(energy);
+                        if (v !== null && v !== undefined) {
+                            dailyTotal += energy;
+                            if (i >= startHour && i <= endHour) {
+                                periodTotal += energy;
+                            }
+                        }
+                    }
+                }
+
+                row.push(dailyTotal);
+                row.push(periodTotal);
+                rows.push(row);
+            });
+
+            return rows;
+        }
+
+        // 构建15分钟功率数据表
+        function buildPowerDataRows15Min({ data = [] }) {
+            const rows = [];
+            // 表头 - 96个15分钟时段
+            const header = ['日期', '计量点'];
+            for (let i = 0; i < 96; i++) {
+                const hour = Math.floor(i / 4);
+                const min = (i % 4) * 15;
+                header.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} (kW)`);
+            }
+            header.push('日最大值(kW)', '日最小值(kW)', '日平均值(kW)');
+            rows.push(header);
+
+            const dataToExport = data.length > 0 ? data : (appData?.processedData || []);
+            dataToExport.forEach(d => {
+                const row = [d.date, d.meteringPoint || '默认计量点'];
+                const values = [];
+
+                if (d.hourlyData15min && d.hourlyData15min.length > 0) {
+                    for (let i = 0; i < 96; i++) {
+                        const v = d.hourlyData15min[i];
+                        row.push(v !== null && v !== undefined ? v : '');
+                        if (v !== null && v !== undefined) values.push(v);
+                    }
+                } else if (d.hourlyData) {
+                    // 如果没有15分钟数据，从小时数据插值
+                    for (let i = 0; i < 96; i++) {
+                        const hour = Math.floor(i / 4);
+                        const v = d.hourlyData[hour];
+                        row.push(v !== null && v !== undefined ? v : '');
+                        if (v !== null && v !== undefined) values.push(v);
+                    }
+                }
+
+                if (values.length > 0) {
+                    row.push(Math.max(...values));
+                    row.push(Math.min(...values));
+                    row.push(values.reduce((a, b) => a + b, 0) / values.length);
+                } else {
+                    row.push('', '', '');
+                }
+                rows.push(row);
+            });
+
+            return rows;
+        }
+
+        // 构建15分钟电量数据表
+        function buildEnergyDataRows15Min({ data = [] }) {
+            const rows = [];
+            const hoursMultiplier = 15 / 60; // 0.25小时
+
+            // 表头 - 96个15分钟时段
+            const header = ['日期', '计量点'];
+            for (let i = 0; i < 96; i++) {
+                const hour = Math.floor(i / 4);
+                const min = (i % 4) * 15;
+                header.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} (kWh)`);
+            }
+            header.push('日累计电量(kWh)', '时段电量(kWh)');
+            rows.push(header);
+
+            const dataToExport = data.length > 0 ? data : (appData?.processedData || []);
+            const startHour = Number(appData?.visualization?.focusStartTime ?? 0);
+            const endHour = Number(appData?.visualization?.focusEndTime ?? 23);
+
+            dataToExport.forEach(d => {
+                const row = [d.date, d.meteringPoint || '默认计量点'];
+                let dailyTotal = 0;
+                let periodTotal = 0;
+
+                if (d.hourlyData15min && d.hourlyData15min.length > 0) {
+                    for (let i = 0; i < 96; i++) {
+                        const v = d.hourlyData15min[i];
+                        const energy = v !== null && v !== undefined ? v * hoursMultiplier : '';
+                        row.push(energy);
+                        if (v !== null && v !== undefined) {
+                            dailyTotal += energy;
+                            const hour = Math.floor(i / 4);
+                            if (hour >= startHour && hour <= endHour) {
+                                periodTotal += energy;
+                            }
+                        }
+                    }
+                } else if (d.hourlyData) {
+                    // 如果没有15分钟数据，从小时数据插值
+                    for (let i = 0; i < 96; i++) {
+                        const hour = Math.floor(i / 4);
+                        const v = d.hourlyData[hour];
+                        const energy = v !== null && v !== undefined ? v * hoursMultiplier : '';
+                        row.push(energy);
+                        if (v !== null && v !== undefined) {
+                            dailyTotal += energy;
+                            if (hour >= startHour && hour <= endHour) {
+                                periodTotal += energy;
+                            }
+                        }
+                    }
+                }
+
+                row.push(dailyTotal);
+                row.push(periodTotal);
+                rows.push(row);
+            });
+
+            return rows;
+        }
+
+        // 构建24小时电量数据表（只显示电量）
+        function buildEnergyDataRows24H({ data = [] }) {
+            const rows = [];
+            const hoursMultiplier = 1; // 1小时
+
+            // 表头 - 24个小时时段
+            const header = ['日期', '计量点'];
+            for (let i = 0; i < 24; i++) {
+                header.push(`${i.toString().padStart(2, '0')}:00 (kWh)`);
+            }
+            header.push('日累计电量(kWh)', '时段电量(kWh)');
+            rows.push(header);
+
+            const dataToExport = data.length > 0 ? data : (appData?.processedData || []);
+            const startHour = Number(appData?.visualization?.focusStartTime ?? 0);
+            const endHour = Number(appData?.visualization?.focusEndTime ?? 23);
+
+            dataToExport.forEach(d => {
+                const row = [d.date, d.meteringPoint || '默认计量点'];
+                let dailyTotal = 0;
+                let periodTotal = 0;
+
+                if (d.hourlyData) {
+                    for (let i = 0; i < 24; i++) {
+                        const v = d.hourlyData[i];
+                        const energy = v !== null && v !== undefined ? v * hoursMultiplier : '';
+                        row.push(energy);
+                        if (v !== null && v !== undefined) {
+                            dailyTotal += energy;
+                            if (i >= startHour && i <= endHour) {
+                                periodTotal += energy;
+                            }
+                        }
+                    }
+                } else if (d.hourlyData15min) {
+                    // 从15分钟数据聚合到小时
+                    for (let h = 0; h < 24; h++) {
+                        let hourSum = 0;
+                        for (let m = 0; m < 4; m++) {
+                            const idx = h * 4 + m;
+                            const v = d.hourlyData15min[idx];
+                            if (v !== null && v !== undefined) {
+                                hourSum += v * 0.25; // 15分钟电量
+                            }
+                        }
+                        row.push(hourSum);
+                        dailyTotal += hourSum;
+                        if (h >= startHour && h <= endHour) {
+                            periodTotal += hourSum;
+                        }
+                    }
+                }
+
+                row.push(dailyTotal);
+                row.push(periodTotal);
+                rows.push(row);
+            });
+
+            return rows;
         }
 
         function exportFullPackage(params = {}) {
